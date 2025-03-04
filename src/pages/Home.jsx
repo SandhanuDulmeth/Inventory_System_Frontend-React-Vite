@@ -7,7 +7,9 @@ export default function Home() {
         <div>
 
 <div className="grid grid-cols-4 grid-rows-4 gap-4">
-    <div className="row-span-2">1</div>
+
+    
+    <div className="row-span-2 ">1</div>
     <div className="row-span-2">2</div>
     <div className="col-span-2 col-start-2 row-start-3 flex-container">3
 
