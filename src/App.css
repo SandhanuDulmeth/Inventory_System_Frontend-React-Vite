@@ -45,8 +45,8 @@
 .flex-controllers{
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: space-around;
-  align-items: flex-start;
+  align-items: center;
   align-content: flex-start;
 }

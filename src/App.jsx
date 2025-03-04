@@ -15,15 +15,15 @@ function App() {
 
       <div className="grid grid-cols-6 grid-rows-5 gap-2 h-screen">
 
-        <div className="col-span-5 bg-red-500">
-         
-      <NavBar/>
-         
-        </div>
-        <div className="col-start-6 bg-green-500">
+        <div className="col-span-5">
 
-        <ThemeController />
-<Profile/>
+          <NavBar />
+
+        </div>
+        <div className="col-start-6 flex-controllers">
+
+          <ThemeController />
+          <Profile />
         </div>
         <div className="col-span-6 row-span-4 row-start-2">
           <BrowserRouter>
