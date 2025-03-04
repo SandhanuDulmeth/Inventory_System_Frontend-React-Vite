@@ -15,7 +15,7 @@ function App() {
 
       <div className="grid grid-cols-6 grid-rows-5 gap-2 h-screen">
 
-        <div className="col-span-5">
+        <div className="col-span-5 flex-controllers">
 
           <NavBar />
 

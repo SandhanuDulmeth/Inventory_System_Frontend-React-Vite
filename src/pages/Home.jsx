@@ -11,11 +11,9 @@ export default function Home() {
     
     <div className="row-span-2 ">1</div>
     <div className="row-span-2">2</div>
-    <div className="col-span-2 col-start-2 row-start-3 flex-container">3
+    <div className="col-span-2 col-start-2 row-start-3 flex-container">
 
-    <h2 className="text-red-500">If this is red, Tailwind is working!</h2>
-
-<h1>Home works!8</h1>
+    
 <SwitchButton />
 
 
