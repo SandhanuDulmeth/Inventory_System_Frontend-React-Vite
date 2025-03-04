@@ -1,16 +1,13 @@
 
 import React, { useState } from 'react'
 import SwitchButton from '../components/SwitchButton'
-import BellButton from '../components/BellButton'
 export default function Home(){
     return(
-        <>
-        
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+       <div>
+        <h2 className="text-red-500">If this is red, Tailwind is working!</h2>
+
+        <h1>Home works!8</h1>
         <SwitchButton/>
-        <BellButton/>
        </div>
-       </>
-     
     );
 }
