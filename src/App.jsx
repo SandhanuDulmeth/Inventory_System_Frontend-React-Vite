@@ -15,7 +15,7 @@ function App() {
 
       <div className="grid grid-cols-6 grid-rows-5 gap-2 h-screen">
 
-        <div className="col-span-5 flex-controllers">
+        <div className="col-span-5 flex-controllers ">
 
           <NavBar />
 
@@ -25,14 +25,15 @@ function App() {
           <ThemeController />
           <Profile />
         </div>
-        <div className="col-span-6 row-span-4 row-start-2">
-          <BrowserRouter>
+        <div className="col-span-6 row-span-4 row-start-2 ">
+        <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
             </Routes>
           </BrowserRouter>
 
         </div>
+        
       </div>
 
 

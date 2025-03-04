@@ -1,7 +1,7 @@
 export default function NavBar() {
   return (
     <>
-      <ul className="menu menu-horizontal bg-base-200 rounded-box mt-6 space-x-8">
+      <ul className="menu menu-horizontal bg-base-200 rounded-box  space-x-8">
         <li>
           <a className="tooltip" data-tip="Home">
             <svg

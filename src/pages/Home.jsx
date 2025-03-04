@@ -6,7 +6,7 @@ export default function Home() {
     return (
         <div>
 
-<div className="grid grid-cols-4 grid-rows-4 gap-4">
+<div className="grid grid-cols-4 grid-rows-4 gap-4 h-screen">
 
     
     <div className="row-span-2 ">1</div>
