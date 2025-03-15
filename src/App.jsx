@@ -8,30 +8,29 @@ import Home from './pages/Home'
 import ThemeController from './components/ThemeController'
 import NavBar from './components/navBar'
 import Profile from './components/Profile'
+import Menu from './components/Menu'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+
 function App() {
-
-
   return (
-    <>
-
-      <div className="grid grid-cols-12 grid-rows-5 gap-4">
-        <div className="col-span-12">
+    <BrowserRouter>
+      <div className="flex h-screen">
+        {/* Left Sidebar Menu */}
+        <div className="w-64 h-full bg-white shadow-lg">
+          <Menu/>
+        </div>
+        
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
           <NavBar />
-        </div>
-        <div className="col-span-2 row-span-4 row-start-2">
-          2
-        </div>
-        <div className="col-span-10 row-span-4 col-start-3 row-start-2">
-          <BrowserRouter>
+          <div className="flex-1 p-4">
             <Routes>
               <Route path="/" element={<Home />} />
             </Routes>
-          </BrowserRouter></div>
+          </div>
+        </div>
       </div>
-
-
-    </>
+    </BrowserRouter>
   )
 }
 

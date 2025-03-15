@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 
 const menuItems = [
   {
@@ -7,57 +8,48 @@ const menuItems = [
         icon: "/home.png",
         label: "Home",
         href: "/",
-        
       },
       {
         icon: "/home.png",
         label: "Teachers",
         href: "/",
-      
       },
       {
         icon: "/home.png",
         label: "Students",
         href: "/",
-       
       },
       {
         icon: "/home.png",
         label: "Parents",
         href: "/",
-     
       }
     ],
   }
-  },
 ];
 
-
+const Menu = () => {
   return (
-    <div className="mt-4 text-sm">
+    <div className="h-full py-6 px-4">
       {menuItems.map((i) => (
-        <div className="flex flex-col gap-2" key={i.title}>
-          <span className="hidden lg:block text-gray-400 font-light my-4">
+        <div className="flex flex-col gap-3" key={i.title}>
+          <span className="text-gray-400 font-medium text-sm px-2 py-4">
             {i.title}
           </span>
-          {i.items.map((item) => {
-            if (item.visible.includes(role)) {
-              return (
-                <Link
-                  href={item.href}
-                  key={item.label}
-                  className="flex items-center justify-center lg:justify-start gap-4 text-gray-500 py-2 md:px-2 rounded-md hover:bg-lamaSkyLight"
-                >
-                  <Image src={item.icon} alt="" width={20} height={20} />
-                  <span className="hidden lg:block">{item.label}</span>
-                </Link>
-              );
-            }
-          })}
+          {i.items.map((item) => (
+            <Link
+              to={item.href}
+              key={item.label}
+              className="flex items-center gap-4 text-gray-600 px-2 py-3 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <img src={item.icon} alt="" className="w-5 h-5" />
+              <span className="text-sm font-medium">{item.label}</span>
+            </Link>
+          ))}
         </div>
       ))}
     </div>
   );
-
+};
 
 export default Menu;
