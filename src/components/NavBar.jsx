@@ -9,9 +9,9 @@ export default function NavBar() {
           {/* Left Side - Logo */}
           <div className="col-span-2 flex-shrink-0">
             <img 
-              src="/R.png" 
-              alt="Apple Logo" 
-              className="h-8 w-auto"
+              src="/Logo2.jpeg" 
+              alt="Logo" 
+              className="h-14 w-auto"
             />
           </div>
 
