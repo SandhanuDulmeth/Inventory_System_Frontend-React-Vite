@@ -1,3 +1,5 @@
+// src\App.jsx
+
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
@@ -13,29 +15,20 @@ function App() {
   return (
     <>
 
-      <div className="grid grid-cols-6 grid-rows-5 gap-2 h-screen">
-
-        <div className="col-span-5 flex-controllers ">
-
+      <div className="grid grid-cols-12 grid-rows-5 gap-4">
+        <div className="col-span-12">
           <NavBar />
-
         </div>
-        <div className="col-start-6 flex-controllers">
-
-          <ThemeController />
-          <Profile />
+        <div className="col-span-2 row-span-4 row-start-2">
+          2
         </div>
-        <div className="col-span-6 row-span-4 row-start-2 ">
-        <BrowserRouter>
+        <div className="col-span-10 row-span-4 col-start-3 row-start-2">
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
             </Routes>
-          </BrowserRouter>
-
-        </div>
-        
+          </BrowserRouter></div>
       </div>
-
 
 
     </>

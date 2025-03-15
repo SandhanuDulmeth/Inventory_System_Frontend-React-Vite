@@ -1,59 +1,51 @@
+import Profile from "./Profile";
+import ThemeController from "./ThemeController";
+
 export default function NavBar() {
   return (
-    <>
-      <ul className="menu menu-horizontal bg-base-200 rounded-box  space-x-8">
-        <li>
-          <a className="tooltip" data-tip="Home">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-              />
-            </svg>
-          </a>
-        </li>
-        <li>
-          <a className="tooltip" data-tip="Details">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </a>
-        </li>
-        <li>
-          <a className="tooltip" data-tip="Stats">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-          </a>
-        </li>
-      </ul>
-    </>
+    <nav className="w-full bg-white dark:bg-gray-900 transition-colors duration-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-12 items-center h-16 gap-4">
+          {/* Left Side - Logo */}
+          <div className="col-span-2 flex-shrink-0">
+            <img 
+              src="/R.png" 
+              alt="Apple Logo" 
+              className="h-8 w-auto"
+            />
+          </div>
+
+          {/* Menu Selection Space */}
+          <div className="col-span-2">
+            {/* Add your menu selection component here */}
+          </div>
+
+          {/* Middle - Search Bar */}
+          <div className="col-span-5">
+            <div className="relative flex items-center">
+              <div className="hidden sm:flex w-full items-center gap-2 text-xs rounded-full ring-[1.5px] ring-gray-300 dark:ring-gray-600 px-2">
+                <img 
+                  src="/search.png" 
+                  alt="search" 
+                  className="w-[14px] h-[14px] dark:invert"
+                />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-full p-2 bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side - Theme & Profile */}
+          <div className="col-span-3 flex items-center justify-end space-x-4">
+            <ThemeController />
+            <Profile />
+          </div>
+        </div>
+      </div>
+    </nav>
   );
 }
+
