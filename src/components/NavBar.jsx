@@ -3,7 +3,7 @@ import ThemeController from "./ThemeController";
 
 export default function NavBar() {
   return (
-    <nav className="w-full bg-white dark:bg-gray-900 transition-colors duration-200 shadow-sm">
+    <nav className="w-full bg-base-100 transition-colors duration-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-12 items-center h-16 gap-4">
           {/* Left Side - Logo */}
