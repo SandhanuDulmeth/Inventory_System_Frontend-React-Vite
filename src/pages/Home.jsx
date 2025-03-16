@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react'
 import SwitchButton from '../components/SwitchButton'
+import RadarChartItemTop5 from '../components/radarChartItemTop5'
 import './home.css'
 export default function Home() {
     return (
@@ -13,8 +13,8 @@ export default function Home() {
     <div className="row-span-2">2</div>
     <div className="col-span-2 col-start-2 row-start-3 flex-container">
 
-    
-<SwitchButton />
+<RadarChartItemTop5 />
+
 
 
     </div>
