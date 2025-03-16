@@ -1,83 +1,84 @@
 import { useEffect, useState } from 'react';
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
+import io from 'socket.io-client';
 
 const ChatComponent = () => {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
-  const [stompClient, setStompClient] = useState(null);
+  const [socket, setSocket] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
 
   useEffect(() => {
-    // Fetch existing messages from the correct GET endpoint
-    fetch('http://localhost:8080/api/messages')
-    .then(response => {
-      if (!response.ok) {
-        throw new Error('Failed to fetch messages');
-      }
-      return response.json();
-    })
-    .then(data => {
-      if (Array.isArray(data)) {
+    // Fetch message history
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/messages');
+        const data = await response.json();
         setMessages(data.map(msg => msg.content));
+      } catch (error) {
+        console.error('Error fetching messages:', error);
       }
-    })
-    .catch(error => console.error('Error:', error));
-    
-    // Connect to the correct WebSocket endpoint
-    const client = new Client({
-      brokerURL: 'ws://localhost:8080/chat', // Not used with SockJS, but kept for reference
-      webSocketFactory: () => new SockJS('http://localhost:8080/chat'), // 👈 Correct SockJS URL
-      debug: (str) => console.debug('STOMP:', str), // 👈 Add debug logs
-      onConnect: () => {
-        setConnectionStatus('connected');
-        client.subscribe('/topic/messages', (messageOutput) => {
-          setMessages((prevMessages) => [...prevMessages, messageOutput.body]);
-        });
+    };
+
+    fetchMessages();
+
+    const newSocket = io('http://localhost:9092', {
+      transports: ['websocket'],
+      reconnectionAttempts: 3,
+      path: '/socket.io',
+      forceNew: true,
+      query: {
+          EIO: "3",
+          transport: "websocket"
       },
-      onDisconnect: () => {
-        setConnectionStatus('disconnected');
-      },
-      onStompError: (frame) => {
-        console.error('STOMP error:', frame);
-        setConnectionStatus('error');
-      },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
+      extraHeaders: {
+          "Cross-Origin-Opener-Policy": "same-origin-allow-popups"
+      }
+  });
+    // Add error listener in React component
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection Error:', error);
+    });
+    // Add detailed error listeners
+    newSocket.on('connect_error', (error) => {
+      console.error('Connection Error:', error.message);
+      console.debug('Error details:', error);
+  });
+
+  newSocket.on('connect_timeout', (timeout) => {
+      console.error('Connection Timeout:', timeout);
+  });
+
+  newSocket.on('reconnect_failed', () => {
+      console.error('Permanent Connection Failure');
+  });
+    newSocket.on('error', (error) => {
+      console.error('Socket Error:', error);
+    });
+    newSocket.on('connect', () => {
+      setConnectionStatus('connected');
+      console.log('Socket.IO connected');
     });
 
-    try {
-      client.activate();
-      setStompClient(client);
-    } catch (error) {
-      console.error('Error activating STOMP client:', error);
-      setConnectionStatus('error');
-    }
+    newSocket.on('disconnect', () => {
+      setConnectionStatus('disconnected');
+      console.log('Socket.IO disconnected');
+    });
 
-    // Cleanup on unmount
+    newSocket.on('message', (msg) => {
+      setMessages(prev => [...prev, msg]);
+    });
+
+    setSocket(newSocket);
+
     return () => {
-      if (stompClient) {
-        try {
-          stompClient.deactivate();
-        } catch (error) {
-          console.error('Error deactivating STOMP client:', error);
-        }
-      }
+      newSocket.disconnect();
     };
   }, []);
 
   const sendMessage = () => {
-    if (message.trim() && stompClient && connectionStatus === 'connected') {
-      try {
-        stompClient.publish({
-          destination: '/app/sendMessage',
-          body: message
-        });
-        setMessage('');
-      } catch (error) {
-        console.error('Error sending message:', error);
-      }
+    if (message.trim() && socket) {
+      socket.emit('message', message.trim());
+      setMessage('');
     }
   };
 
@@ -85,10 +86,8 @@ const ChatComponent = () => {
     <div className="p-4">
       <div className="mb-4">
         <div className="text-sm mb-2">
-          Status: <span className={`font-bold ${
-            connectionStatus === 'connected' ? 'text-green-600' : 
-            connectionStatus === 'error' ? 'text-red-600' : 'text-yellow-600'
-          }`}>{connectionStatus}</span>
+          Status: <span className={`font-bold ${connectionStatus === 'connected' ? 'text-green-600' : 'text-red-600'
+            }`}>{connectionStatus}</span>
         </div>
         <div className="border rounded p-4 h-64 overflow-y-auto mb-4">
           {messages.map((msg, index) => (
@@ -102,12 +101,11 @@ const ChatComponent = () => {
             onChange={(e) => setMessage(e.target.value)}
             className="flex-1 px-3 py-2 border rounded"
             placeholder="Type your message..."
-            disabled={connectionStatus !== 'connected'}
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
           />
           <button
             onClick={sendMessage}
-            disabled={connectionStatus !== 'connected'}
-            className="px-4 py-2 bg-blue-500 text-white rounded disabled:bg-gray-300"
+            className="px-4 py-2 bg-blue-500 text-white rounded"
           >
             Send
           </button>
