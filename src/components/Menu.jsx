@@ -11,32 +11,32 @@ const menuItems = [
       },
       {
         label: "Inventory Management",
-        href: "/",
+        href: "/inventory",
         icon: "inventory",
       },
       {
         label: "Orders",
-        href: "/",
+        href: "/orders",
         icon: "orders",
       },
       {
         label: "Suppliers",
-        href: "/",
+        href: "/suppliers",
         icon: "suppliers",
       },
       {
         label: "Reports",
-        href: "/",
+        href: "/reports",
         icon: "reports",
       },
       {
         label: "Help & Support",
-        href: "/",
+        href: "/help-support",
         icon: "help",
       },
       {
         label: "Analysis",
-        href: "/",
+        href: "/analysis",
         icon: "analysis",
       }
     ],
