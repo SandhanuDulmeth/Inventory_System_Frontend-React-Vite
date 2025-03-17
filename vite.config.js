@@ -5,6 +5,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   define: {
-    global: {},
+    global: {}, // Required by some libraries like 'stompjs'
   },
-})
+  server: {
+    proxy: {
+      '/ws': {
+        target: 'http://localhost:8080', // HTTP protocol
+        changeOrigin: true,
+        ws: true, // WebSocket support
+        secure: false
+      }
+    }
+  }
+});

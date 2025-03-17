@@ -5,7 +5,7 @@ export default function Profile() {
             <div className="w-10 rounded-full">
                 <img
                     alt="Profile Pic"
-                    src="https://i.pinimg.com/originals/54/72/d1/5472d1b09d3d724228109d381d617326.jpg" />
+                    src="/Logo.png" />
             </div>
         </div>
         <ul
