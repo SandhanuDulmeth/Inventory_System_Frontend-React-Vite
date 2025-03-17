@@ -1,17 +1,7 @@
-import { useState, useEffect } from "react";
+import { useTheme } from '../context/ThemeContext';
 
 export default function ThemeController() {
-  const [theme, setTheme] = useState("light");
-
-  // Toggle between "light" and "dark" themes.
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  };
-
-  // Update the data-theme attribute on the root <html> element.
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <label className="swap swap-rotate">

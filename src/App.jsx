@@ -1,48 +1,65 @@
 // src\App.jsx
 
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { BrowserRouter } from 'react-router-dom'
 import './App.css'
-import Home from './pages/Home'
-import ThemeController from './components/ThemeController'
-import NavBar from './components/NavBar'
-import Profile from './components/Profile'
-import Menu from './components/Menu'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import InventoryManagement from './pages/InventoryManagement'
-import Orders from './pages/Orders'
-import Suppliers from './pages/Suppliers'
-import Reports from './pages/Reports'
-import HelpSupport from './pages/HelpSupport'
-import Analysis from './pages/Analysis'
+import { AuthProvider } from './context/AuthContext'
+import { ChatProvider } from './context/ChatContext'
+import { ThemeProvider } from './context/ThemeContext'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import Login from './pages/Login'
+import AdminDashboard from './pages/AdminDashboard'
+import CustomerLayout from './components/CustomerLayout'
+import ProtectedRoute from './components/ProtectedRoute'
+import AdminChat from './components/AdminChat'
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="flex h-screen">
-        {/* Left Sidebar Menu */}
-        <div className="w-64 h-full bg-white shadow-lg">
-          <Menu/>
-        </div>
-        
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          <NavBar />
-          <div className="flex-1 p-4">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/inventory" element={<InventoryManagement />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/suppliers" element={<Suppliers />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/help-support" element={<HelpSupport />} />
-              <Route path="/analysis" element={<Analysis />} />
-            </Routes>
-          </div>
-        </div>
-      </div>
-    </BrowserRouter>
+    <ThemeProvider>
+      <AuthProvider>
+        <ChatProvider>
+          <BrowserRouter>
+            <div className="min-h-screen bg-base-100">
+              <Routes>
+                {/* Public routes */}
+                <Route path="/login" element={<Login />} />
+                
+                {/* Admin routes */}
+                <Route
+                  path="/admin/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                      <div className="flex h-screen">
+                        {/* Admin Dashboard Sidebar */}
+                        <div className="w-64 bg-base-100 shadow-lg">
+                          <AdminDashboard />
+                        </div>
+                        {/* Main Content Area */}
+                        <div className="flex-1 overflow-hidden">
+                          <AdminChat />
+                        </div>
+                      </div>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Customer routes */}
+                <Route
+                  path="/customer/*"
+                  element={
+                    <ProtectedRoute allowedRoles={['CUSTOMER', 'ADMIN']}>
+                      <CustomerLayout />
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Redirect root to login if not authenticated */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </ChatProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

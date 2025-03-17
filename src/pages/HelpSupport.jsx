@@ -1,119 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Client } from "@stomp/stompjs";
-import styled from 'styled-components';
-
-const Container = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: ${props => props.theme === 'dark' ? '#1a1a1a' : '#ffffff'};
-  color: ${props => props.theme === 'dark' ? '#ffffff' : '#000000'};
-`;
-
-const Header = styled.h1`
-  text-align: center;
-  margin-bottom: 20px;
-  color: ${props => props.theme === 'dark' ? '#ffffff' : '#000000'};
-`;
-
-const ConnectionStatus = styled.div`
-  padding: 10px;
-  border-radius: 5px;
-  margin-bottom: 20px;
-  background-color: ${props => {
-    if (props.isConnecting) return '#ffd700';
-    if (props.isConnected) return '#4CAF50';
-    return '#f44336';
-  }};
-  color: ${props => props.isConnecting ? '#000000' : '#ffffff'};
-  text-align: center;
-  font-weight: bold;
-`;
-
-const MessagesContainer = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  border-radius: 10px;
-  background-color: ${props => props.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'};
-  margin-bottom: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-`;
-
-const Message = styled.div`
-  margin: 10px 0;
-  padding: 10px 15px;
-  border-radius: 15px;
-  max-width: 80%;
-  word-wrap: break-word;
-  background-color: ${props => props.theme === 'dark' ? '#3d3d3d' : '#e3f2fd'};
-  color: ${props => props.theme === 'dark' ? '#ffffff' : '#000000'};
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-`;
-
-const InputContainer = styled.div`
-  display: flex;
-  gap: 10px;
-  padding: 20px;
-  background-color: ${props => props.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'};
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-`;
-
-const Input = styled.input`
-  flex: 1;
-  padding: 12px;
-  border: 2px solid ${props => props.theme === 'dark' ? '#4d4d4d' : '#e0e0e0'};
-  border-radius: 25px;
-  background-color: ${props => props.theme === 'dark' ? '#3d3d3d' : '#ffffff'};
-  color: ${props => props.theme === 'dark' ? '#ffffff' : '#000000'};
-  font-size: 16px;
-  outline: none;
-  transition: border-color 0.3s ease;
-
-  &:focus {
-    border-color: #2196F3;
-  }
-
-  &:disabled {
-    background-color: ${props => props.theme === 'dark' ? '#2d2d2d' : '#f5f5f5'};
-    cursor: not-allowed;
-  }
-`;
-
-const SendButton = styled.button`
-  padding: 12px 25px;
-  border: none;
-  border-radius: 25px;
-  background-color: #2196F3;
-  color: white;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background-color: #1976D2;
-    transform: translateY(-1px);
-  }
-
-  &:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
-
-const ErrorMessage = styled.div`
-  color: #f44336;
-  margin-top: 8px;
-  padding: 10px;
-  border-radius: 5px;
-  background-color: rgba(244, 67, 54, 0.1);
-  text-align: center;
-`;
+import { Client } from '@stomp/stompjs';
+import { useAuth } from '../context/AuthContext';
 
 const HelpSupport = () => {
   const [messages, setMessages] = useState([]);
@@ -122,148 +9,300 @@ const HelpSupport = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState('');
-  const [theme, setTheme] = useState('light');
+  const { user } = useAuth();
 
+  // WebSocket connection setup
   useEffect(() => {
-    // Fetch existing messages from the backend
-    fetch('http://localhost:8080/api/messages')
-      .then(response => response.json())
-      .then(data => {
-        setMessages(data);
+    // Early return if no user ID
+    if (!user?.id) {
+      console.log('No user ID available, skipping connection setup');
+      return;
+    }
+
+    console.log('Attempting to fetch messages...', user);
+
+    // Fetch messages for the customer
+    fetch(`http://localhost:8080/api/customer/messages/${user.id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${user.token}`
+      },
+      credentials: 'include'
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.json();
       })
-      .catch(error => {
+      .then((data) => {
+        console.log('Fetched messages:', data);
+        setMessages(data || []);
+      })
+      .catch((error) => {
         console.error('Error fetching messages:', error);
-        setConnectionError('Failed to load previous messages');
+        setConnectionError('Failed to connect to server. Please try again later.');
       });
+
+    // Setup WebSocket
+    const wsUrl = 'ws://localhost:8080/ws';
+    console.log('Setting up WebSocket connection to:', wsUrl);
 
     const client = new Client({
-      webSocketFactory: () => new WebSocket('/ws'), 
+      brokerURL: wsUrl,
+      connectHeaders: {
+        Authorization: `Bearer ${user.token}`
+      },
+      debug: function (str) {
+        console.log('STOMP:', str);
+      },
       reconnectDelay: 5000,
-      heartbeatIncoming: 10000,
-      heartbeatOutgoing: 10000,
-      debug: (str) => {
-        console.log("[STOMP] ", str);
-        if (str.includes('Connection closed')) {
-          setConnectionError('Connection closed. Check the server status or logs.');
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: function (frame) {
+        console.log('STOMP Connected:', frame);
+        setIsConnected(true);
+        setIsConnecting(false);
+        setConnectionError('');
+
+        if (user?.id) {
+          this.subscribe(`/topic/messages/${user.id}`, (message) => {
+            console.log('Received message:', message);
+            try {
+              const receivedMsg = JSON.parse(message.body);
+              setMessages((prev) => [...prev, receivedMsg]);
+            } catch (err) {
+              console.error('Error parsing message:', err);
+            }
+          });
         }
       },
+      onStompError: function (frame) {
+        console.error('STOMP error:', frame);
+        setIsConnected(false);
+        setIsConnecting(false);
+        setConnectionError(
+          'Connection error: ' + (frame.headers?.message || 'Unknown error')
+        );
+      },
+      onWebSocketError: function (event) {
+        console.error('WebSocket error:', event);
+        setIsConnected(false);
+        setIsConnecting(false);
+        setConnectionError('WebSocket error: Failed to connect to server');
+      },
+      onDisconnect: function () {
+        console.log('STOMP Disconnected');
+        setIsConnected(false);
+        setIsConnecting(false);
+        setConnectionError('Disconnected from server');
+      }
     });
 
-    client.onConnect = (frame) => {
-      console.log("Connected: " + frame);
-      setIsConnected(true);
-      setIsConnecting(false);
-      setConnectionError('');
-      client.subscribe("/topic/messages", (message) => {
-        console.log("Received: " + message.body);
-        setMessages(prev => [...prev, JSON.parse(message.body)]);
-      });
-    };
-
-    client.onStompError = (frame) => {
-      console.error("STOMP ERROR: ", frame);
-      setIsConnected(false);
-      setIsConnecting(false);
-      setConnectionError(`STOMP Error: ${frame.headers?.message || 'Unknown error'}`);
-    };
-
-    client.onDisconnect = () => {
-      setIsConnected(false);
-      setIsConnecting(false);
-      setConnectionError('Disconnected from server');
-    };
-
-    client.onWebSocketError = (error) => {
-      console.error('WebSocket Error:', error);
-      setIsConnecting(false);
-      setConnectionError(`WebSocket Error: ${error.message || 'Failed to connect'}`);
-    };
-
     try {
+      console.log('Activating STOMP client...');
       client.activate();
       setStompClient(client);
     } catch (error) {
-      console.error('Activation Error:', error);
+      console.error('Error activating client:', error);
       setIsConnecting(false);
-      setConnectionError(`Activation Error: ${error.message}`);
+      setConnectionError('Failed to connect: ' + error.toString());
     }
 
     return () => {
       if (client.active) {
+        console.log('Cleaning up WebSocket connection...');
         client.deactivate();
       }
     };
-  }, []);
+  }, [user]);
 
   const sendMessage = () => {
-    if (isConnected && inputMessage.trim()) {
-      // Publish to WebSocket
-      stompClient.publish({
-        destination: "/app/sendMessage",
-        body: JSON.stringify({ text: inputMessage }),
-      });
+    if (isConnected && inputMessage.trim() && user?.id) {
+      const messageData = {
+        senderId: user.id,
+        content: inputMessage.trim(),
+        timestamp: new Date().toISOString()
+      };
 
-      // Save to backend
-      fetch('http://localhost:8080/api/messages/adddata', {
+      // Send via WebSocket
+      if (stompClient?.active) {
+        stompClient.publish({
+          destination: '/app/chat',
+          body: JSON.stringify(messageData)
+        });
+      }
+
+      // Also save via REST API
+      fetch('http://localhost:8080/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json'
         },
-        body: JSON.stringify({ text: inputMessage }),
+        body: JSON.stringify(messageData)
       })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Message saved:', data);
-        // Update the messages state with the new message
-        setMessages(prevMessages => [...prevMessages, data]);
-      })
-      .catch(error => {
-        console.error('Error saving message:', error);
-        setConnectionError('Failed to save message');
-      });
-
-      setInputMessage('');
+        .then((response) => {
+          if (!response.ok) throw new Error('Failed to save message');
+          return response.json();
+        })
+        .then((savedMessage) => {
+          console.log('Message saved:', savedMessage);
+          setMessages((prev) => [...prev, savedMessage]);
+          setInputMessage('');
+        })
+        .catch((error) => {
+          console.error('Error saving message:', error);
+          setConnectionError('Failed to send message. Please try again.');
+        });
     } else if (!isConnected) {
       setConnectionError('Not connected to server. Please wait...');
     }
   };
 
+  const checkConnection = () => {
+    if (isConnected) {
+      alert('We are still connected to the server!');
+    } else {
+      alert('We are not connected to the server right now.');
+    }
+  };
+
+  useEffect(() => {
+    console.log('Connection state updated:', {
+      isConnected,
+      isConnecting,
+      connectionError
+    });
+  }, [isConnected, isConnecting, connectionError]);
+
   return (
-    <Container theme={theme}>
-      <Header theme={theme}>Help & Support</Header>
-      <ConnectionStatus isConnected={isConnected} isConnecting={isConnecting}>
-        Status: {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Disconnected'}
-      </ConnectionStatus>
-      {connectionError && (
-        <ErrorMessage>{connectionError}</ErrorMessage>
-      )}
-      <MessagesContainer theme={theme}>
-        {messages.map((message, index) => (
-          <Message key={index} theme={theme}>
-            {typeof message === 'string' ? message : JSON.stringify(message)}
-          </Message>
-        ))}
-      </MessagesContainer>
-      <InputContainer theme={theme}>
-        <Input
-          type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              sendMessage();
+    <div className="flex flex-col h-screen bg-white dark:bg-gray-900">
+      {/* Header */}
+      <div className="border-b dark:border-gray-700">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-lg font-semibold">A</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold dark:text-white">Admin Support</h2>
+              <div className="flex items-center gap-2 mt-1">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    isConnecting
+                      ? 'bg-yellow-500 animate-pulse'
+                      : isConnected
+                      ? 'bg-green-500'
+                      : 'bg-red-500'
+                  }`}
+                />
+                <span
+                  className={`text-sm font-medium ${
+                    isConnecting
+                      ? 'text-yellow-600 dark:text-yellow-400'
+                      : isConnected
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {isConnecting
+                    ? 'Connecting to server...'
+                    : isConnected
+                    ? 'Connected - Online'
+                    : 'Disconnected - Offline'}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={checkConnection}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              isConnecting
+                ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                : isConnected
+                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                : 'bg-red-100 text-red-800 hover:bg-red-200'
+            } dark:bg-opacity-20 dark:hover:bg-opacity-30`}
+          >
+            {isConnecting
+              ? 'Connecting...'
+              : isConnected
+              ? 'Connection Healthy'
+              : 'Reconnect Now'}
+          </button>
+        </div>
+        {connectionError && (
+          <div className="bg-red-100 text-red-800 px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 dark:bg-red-900 dark:text-red-100">
+            <svg
+              className="w-4 h-4 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <span>{connectionError}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+            <h3 className="text-lg font-medium">No messages yet</h3>
+            <p className="text-sm">Start a conversation with the admin</p>
+          </div>
+        ) : (
+          messages.map((msg, index) => (
+            <div key={index} className="flex flex-col">
+              <div className="max-w-[80%] bg-blue-100 dark:bg-blue-900 rounded-lg p-3 text-gray-800 dark:text-gray-200">
+                {typeof msg === 'string' ? msg : msg.content}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t dark:border-gray-700 p-4">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder={
+              isConnected ? 'Type a message...' : 'Waiting for connection...'
             }
-          }}
-          placeholder="Type your message..."
-          disabled={!isConnected}
-          theme={theme}
-        />
-        <SendButton onClick={sendMessage} disabled={!isConnected}>
-          Send
-        </SendButton>
-      </InputContainer>
-    </Container>
+            disabled={!isConnected}
+            className="flex-1 px-4 py-2 rounded-full border dark:border-gray-600 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!isConnected}
+            className={`px-6 py-2 rounded-full font-medium transition-colors ${
+              isConnected
+                ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 

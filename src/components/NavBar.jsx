@@ -9,7 +9,7 @@ export default function NavBar() {
           {/* Left Side - Logo */}
           <div className="col-span-2 flex-shrink-0">
             <img 
-              src="/Logo2.jpeg" 
+              src="/Logo.png" 
               alt="Logo" 
               className="h-14 w-auto"
             />

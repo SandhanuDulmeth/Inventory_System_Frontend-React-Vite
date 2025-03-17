@@ -1,97 +1,158 @@
 import { Link } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 
 const menuItems = [
   {
-    title: "MENU",
+    title: "Main",
     items: [
-      {
-        label: "Home",
-        href: "/",
-        icon: "home",
-      },
-      {
-        label: "Inventory Management",
-        href: "/inventory",
-        icon: "inventory",
-      },
-      {
-        label: "Orders",
-        href: "/orders",
-        icon: "orders",
-      },
-      {
-        label: "Suppliers",
-        href: "/suppliers",
-        icon: "suppliers",
-      },
-      {
-        label: "Reports",
-        href: "/reports",
-        icon: "reports",
-      },
-      {
-        label: "Help & Support",
-        href: "/help-support",
-        icon: "help",
-      },
-      {
-        label: "Analysis",
-        href: "/analysis",
-        icon: "analysis",
-      }
+      { label: "Home", href: "/customer", icon: "home" },
+      { label: "Inventory Management", href: "/customer/inventory", icon: "inventory" },
+      { label: "Orders", href: "/customer/orders", icon: "orders" },
+      { label: "Suppliers", href: "/customer/suppliers", icon: "suppliers" },
+      { label: "Reports", href: "/customer/reports", icon: "reports" },
+      { label: "Help & Support", href: "/customer/help-support", icon: "help" },
+      { label: "Analysis", href: "/customer/analysis", icon: "analysis" },
     ],
-  }
+  },
 ];
 
 const icons = {
   home: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-house-door" viewBox="0 0 16 16">
-      <path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4z" />
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+      />
     </svg>
   ),
   inventory: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-box-seam" viewBox="0 0 16 16">
-      <path d="M2.5 1.5a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-.5.5h-10A.5.5 0 0 1 2 6V1.5zm0 7A.5.5 0 0 1 3 8h10a.5.5 0 0 1 .5.5V14a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5V8.5z" />
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+      />
     </svg>
   ),
   orders: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-cart" viewBox="0 0 16 16">
-      <path d="M0 1a1 1 0 0 1 1-1h2a1 1 0 0 1 .96.72L4.84 3H14a1 1 0 0 1 .96 1.28l-1.5 6A1 1 0 0 1 12.5 11H5.1l-.28 1.11A.5.5 0 0 1 4.5 13H1a1 1 0 0 1-1-1V1z" />
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+      />
     </svg>
   ),
   suppliers: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-truck" viewBox="0 0 16 16">
-      <path d="M3 1a1 1 0 0 0-1 1v11h1a2 2 0 1 0 4 0h4a2 2 0 1 0 4 0h1V5.5L13 1H3z" />
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+      />
     </svg>
   ),
   reports: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-file-earmark-bar-graph" viewBox="0 0 16 16">
-    <path d="M10 13.5a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-6a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5zm-2.5.5a.5.5 0 0 1-.5-.5v-4a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.5.5zm-3 0a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.5.5z"/>
-    <path d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2M9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5z"/>
-  </svg>
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      />
+    </svg>
   ),
   help: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-question-circle" viewBox="0 0 16 16">
-      <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1a6 6 0 1 1 0 12A6 6 0 0 1 8 2zm.5 10a.5.5 0 1 1-1 0 .5.5 0 0 1 1 0zm-.125-3.125a.625.625 0 1 0-1.25 0 .75.75 0 0 0 1.5 0 1.375 1.375 0 1 1-2.75 0 .75.75 0 0 0-1.5 0 2.875 2.875 0 1 0 5.75 0 .625.625 0 1 0-1.25 0z" />
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
     </svg>
   ),
   analysis: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-graph-up" viewBox="0 0 16 16">
-      <path fillRule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07" />
+    <svg
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      />
     </svg>
-  )
+  ),
 };
 
 const Menu = () => {
+  const { theme } = useTheme();
+
   return (
     <div className="h-full py-6 px-4">
       {menuItems.map((i) => (
         <div className="flex flex-col gap-3" key={i.title}>
-          <span className="text-gray-400 font-medium text-sm px-2 py-4">
+          <span className={`font-medium text-sm px-2 py-4 ${
+            theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+          }`}>
             {i.title}
           </span>
           {i.items.map((item) => (
-            <Link to={item.href} key={item.label} className="flex items-center gap-4 text-gray-600 px-2 py-3 rounded-lg hover:bg-gray-100 transition-colors">
+            <Link 
+              to={item.href} 
+              key={item.label} 
+              className={`flex items-center gap-4 px-2 py-3 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'text-gray-300 hover:bg-gray-700' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
               {icons[item.icon]}
               <span className="text-sm font-medium">{item.label}</span>
             </Link>
