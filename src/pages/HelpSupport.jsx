@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +10,8 @@ const HelpSupport = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState('');
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingContent, setEditingContent] = useState('');
   const { user } = useAuth();
 
   useEffect(() => {
@@ -23,7 +26,7 @@ const HelpSupport = () => {
 
     console.log('Setting up chat for customer:', user.email);
 
-    // Fetch existing messages for this customer
+    // Fetch existing messages
     fetch(`http://localhost:8080/api/customer/messages/${encodeURIComponent(user.email)}`, {
       method: 'GET',
       headers: {
@@ -79,7 +82,9 @@ const HelpSupport = () => {
         console.error('STOMP error:', frame);
         setIsConnected(false);
         setIsConnecting(false);
-        setConnectionError('Connection error: ' + (frame.headers?.message || 'Unknown error'));
+        setConnectionError(
+          'Connection error: ' + (frame.headers?.message || 'Unknown error')
+        );
       },
       onWebSocketError: function (event) {
         console.error('WebSocket error:', event);
@@ -130,7 +135,7 @@ const HelpSupport = () => {
       timestamp: new Date().getTime()
     };
 
-    // Send via WebSocket
+    // Send via WebSocket (if connected)
     if (stompClient?.active) {
       stompClient.publish({
         destination: '/app/chat',
@@ -167,6 +172,61 @@ const HelpSupport = () => {
       alert('We are still connected to the server!');
     } else {
       alert('We are not connected to the server right now.');
+    }
+  };
+
+  const handleEditMessage = (messageId, content) => {
+    setEditingMessageId(messageId);
+    setEditingContent(content);
+  };
+
+  const saveEditedMessage = async (messageId) => {
+    if (!editingContent.trim()) return;
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/customer/messages/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          customerId: user.email,
+          content: editingContent.trim(),
+          timestamp: new Date().getTime()
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to update message');
+
+      const updatedMessage = await response.json();
+      setMessages(messages.map((msg) => (msg.id === messageId ? updatedMessage : msg)));
+      setEditingMessageId(null);
+      setEditingContent('');
+    } catch (error) {
+      console.error('Error updating message:', error);
+      setConnectionError('Failed to update message. Please try again.');
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/customer/messages/${messageId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete message');
+
+      setMessages(messages.filter((msg) => msg.id !== messageId));
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      setConnectionError('Failed to delete message. Please try again.');
     }
   };
 
@@ -270,15 +330,15 @@ const HelpSupport = () => {
             )}
           </div>
         ) : (
-          messages.map((msg, index) => (
+          messages.map((msg) => (
             <div
-              key={index}
+              key={msg.id || Math.random()}
               className={`flex ${
                 msg.customerId === user?.email ? 'justify-end' : 'justify-start'
               }`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[80%] rounded-lg p-3 relative group ${
                   msg.customerId === user?.email
                     ? 'bg-blue-500 text-white'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
@@ -287,10 +347,80 @@ const HelpSupport = () => {
                 <div className="text-sm font-medium mb-1">
                   {msg.customerId === user?.email ? 'You' : 'Admin'}
                 </div>
-                {typeof msg === 'string' ? msg : msg.content}
-                <div className="text-xs opacity-75 mt-1">
-                  {new Date(msg.timestamp).toLocaleTimeString()}
-                </div>
+
+                {editingMessageId === msg.id ? (
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="text"
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
+                      className="px-2 py-1 rounded border text-black w-full"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => saveEditedMessage(msg.id)}
+                        className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingMessageId(null)}
+                        className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+                    <div className="text-xs opacity-75 mt-1">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </div>
+
+                    {msg.customerId === user?.email && (
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                        <button
+                          onClick={() => handleEditMessage(msg.id, msg.content)}
+                          className="p-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="p-1 rounded bg-red-600 hover:bg-red-700 text-white"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           ))
@@ -300,20 +430,29 @@ const HelpSupport = () => {
       {/* Input Area */}
       <div className="border-t dark:border-gray-700 p-4">
         <div className="flex gap-2">
-          <input
-            type="text"
+          <textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder={
-              isConnected ? `Type a message as ${user?.email}...` : 'Waiting for connection...'
+              isConnected
+                ? `Press SHIFT+Enter for a new line. Enter sends the message.`
+                : 'Waiting for connection...'
             }
             disabled={!isConnected}
-            className="flex-1 px-4 py-2 rounded-full border dark:border-gray-600 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            onKeyPress={(e) => {
+            className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none min-h-[44px] max-h-32"
+            onKeyDown={(e) => {
+              // ENTER sends if SHIFT not pressed, SHIFT+ENTER adds a newline
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
               }
+            }}
+            rows={1}
+            style={{ overflow: 'hidden', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}
+            onInput={(e) => {
+              // Auto-resize textarea based on content
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
             }}
           />
           <button
