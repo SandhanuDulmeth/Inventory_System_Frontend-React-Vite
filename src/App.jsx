@@ -28,15 +28,8 @@ function App() {
                   path="/admin/*"
                   element={
                     <ProtectedRoute allowedRoles={['ADMIN']}>
-                      <div className="flex h-screen">
-                        {/* Admin Dashboard Sidebar */}
-                        <div className="w-64 bg-base-100 shadow-lg">
-                          <AdminDashboard />
-                        </div>
-                        {/* Main Content Area */}
-                        <div className="flex-1 overflow-hidden">
-                          <AdminChat />
-                        </div>
+                      <div className="min-h-screen bg-base-100">
+                        <AdminDashboard />
                       </div>
                     </ProtectedRoute>
                   }

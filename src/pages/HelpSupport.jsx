@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
@@ -132,7 +131,8 @@ const HelpSupport = () => {
     const messageData = {
       customerId: user.email,
       content: inputMessage.trim(),
-      timestamp: new Date().getTime()
+      timestamp: new Date().getTime(),
+      userType: 'CUSTOMER' // Added userType field
     };
 
     // Send via WebSocket (if connected)
@@ -238,6 +238,104 @@ const HelpSupport = () => {
     });
   }, [isConnected, isConnecting, connectionError]);
 
+  const renderMessage = (msg) => {
+    const isCustomerMessage = msg.user?.toUpperCase() === 'CUSTOMER';
+    const isAdminMessage = !isCustomerMessage;
+
+    return (
+      <div
+        key={msg.id || Math.random()}
+        className={`flex ${isCustomerMessage ? 'justify-start' : 'justify-end'}`}
+      >
+        <div
+          className={`max-w-[80%] rounded-lg p-3 relative group ${
+            isCustomerMessage
+              ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+              : 'bg-blue-500 text-white'
+          }`}
+        >
+          <div className="text-sm font-medium mb-1">
+            {isCustomerMessage ? 'Customer' : 'Admin'}
+          </div>
+
+          {editingMessageId === msg.id ? (
+            <div className="flex flex-col gap-2">
+              <input
+                type="text"
+                value={editingContent}
+                onChange={(e) => setEditingContent(e.target.value)}
+                className="px-2 py-1 rounded border text-black w-full"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => saveEditedMessage(msg.id)}
+                  className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => setEditingMessageId(null)}
+                  className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
+              <div className="text-xs opacity-75 mt-1">
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </div>
+
+              {isCustomerMessage && (
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                  <button
+                    onClick={() => handleEditMessage(msg.id, msg.content)}
+                    className="p-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="p-1 rounded bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-screen bg-white dark:bg-gray-900">
       {/* Header */}
@@ -256,28 +354,26 @@ const HelpSupport = () => {
               )}
               <div className="flex items-center gap-2 mt-1">
                 <div
-                  className={`w-3 h-3 rounded-full ${
-                    isConnecting
+                  className={`w-3 h-3 rounded-full ${isConnecting
                       ? 'bg-yellow-500 animate-pulse'
                       : isConnected
-                      ? 'bg-green-500'
-                      : 'bg-red-500'
-                  }`}
+                        ? 'bg-green-500'
+                        : 'bg-red-500'
+                    }`}
                 />
                 <span
-                  className={`text-sm font-medium ${
-                    isConnecting
+                  className={`text-sm font-medium ${isConnecting
                       ? 'text-yellow-600 dark:text-yellow-400'
                       : isConnected
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}
+                        ? 'text-green-600 dark:text-green-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`}
                 >
                   {isConnecting
                     ? 'Connecting to server...'
                     : isConnected
-                    ? `Connected - ${user?.email || 'Unknown'}`
-                    : 'Disconnected - Offline'}
+                      ? `Connected - ${user?.email || 'Unknown'}`
+                      : 'Disconnected - Offline'}
                 </span>
               </div>
             </div>
@@ -285,19 +381,18 @@ const HelpSupport = () => {
           <div className="flex flex-col items-end gap-2">
             <button
               onClick={checkConnection}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                isConnecting
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isConnecting
                   ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
                   : isConnected
-                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                  : 'bg-red-100 text-red-800 hover:bg-red-200'
-              } dark:bg-opacity-20 dark:hover:bg-opacity-30`}
+                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                    : 'bg-red-100 text-red-800 hover:bg-red-200'
+                } dark:bg-opacity-20 dark:hover:bg-opacity-30`}
             >
               {isConnecting
                 ? 'Connecting...'
                 : isConnected
-                ? 'Connection Healthy'
-                : 'Reconnect Now'}
+                  ? 'Connection Healthy'
+                  : 'Reconnect Now'}
             </button>
           </div>
         </div>
@@ -330,100 +425,7 @@ const HelpSupport = () => {
             )}
           </div>
         ) : (
-          messages.map((msg) => (
-            <div
-              key={msg.id || Math.random()}
-              className={`flex ${
-                msg.customerId === user?.email ? 'justify-end' : 'justify-start'
-              }`}
-            >
-              <div
-                className={`max-w-[80%] rounded-lg p-3 relative group ${
-                  msg.customerId === user?.email
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-                }`}
-              >
-                <div className="text-sm font-medium mb-1">
-                  {msg.customerId === user?.email ? 'You' : 'Admin'}
-                </div>
-
-                {editingMessageId === msg.id ? (
-                  <div className="flex flex-col gap-2">
-                    <input
-                      type="text"
-                      value={editingContent}
-                      onChange={(e) => setEditingContent(e.target.value)}
-                      className="px-2 py-1 rounded border text-black w-full"
-                      autoFocus
-                    />
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => saveEditedMessage(msg.id)}
-                        className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingMessageId(null)}
-                        className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
-                    <div className="text-xs opacity-75 mt-1">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
-                    </div>
-
-                    {msg.customerId === user?.email && (
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                        <button
-                          onClick={() => handleEditMessage(msg.id, msg.content)}
-                          className="p-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteMessage(msg.id)}
-                          className="p-1 rounded bg-red-600 hover:bg-red-700 text-white"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          ))
+          messages.map((msg) => renderMessage(msg))
         )}
       </div>
 
@@ -458,11 +460,10 @@ const HelpSupport = () => {
           <button
             onClick={sendMessage}
             disabled={!isConnected}
-            className={`px-6 py-2 rounded-full font-medium transition-colors ${
-              isConnected
+            className={`px-6 py-2 rounded-full font-medium transition-colors ${isConnected
                 ? 'bg-blue-500 hover:bg-blue-600 text-white'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+              }`}
           >
             Send
           </button>

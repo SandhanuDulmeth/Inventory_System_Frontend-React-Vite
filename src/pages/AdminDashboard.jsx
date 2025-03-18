@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import SlideOutPanel from '../components/SlideOutPanel';
+// import AdminChat from '../components/AdminChat';
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -8,6 +10,8 @@ const AdminDashboard = () => {
     totalProducts: 0,
   });
   const { user } = useAuth();
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  // const [showChat, setShowChat] = useState(false);
 
   useEffect(() => {
     // Fetch admin dashboard data
@@ -31,7 +35,7 @@ const AdminDashboard = () => {
   }, [user]);
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen p-6 bg-gray-100">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
       
       {/* Stats Cards */}
@@ -64,6 +68,12 @@ const AdminDashboard = () => {
             <button className="w-full bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
               View Reports
             </button>
+            <button 
+              className="w-full bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600"
+              onClick={() => setIsChatOpen(true)}
+            >
+              Open Chat
+            </button>
           </div>
         </div>
 
@@ -75,6 +85,9 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Slide-out panel for AdminChat */}
+      <SlideOutPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };
