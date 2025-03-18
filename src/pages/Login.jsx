@@ -18,6 +18,7 @@ const Login = () => {
       // In production, replace this with actual API call
       if (credentials.email === 'admin@admin.com' && credentials.password === 'admin123') {
         const adminData = {
+          id: 'admin@admin.com', // Using email as ID for now
           role: 'ADMIN',
           email: 'admin@admin.com',
           token: 'admin-token'
@@ -26,6 +27,7 @@ const Login = () => {
         navigate('/admin');
       } else if (credentials.email === 'customer12@gmail.com' && credentials.password === 'customer123') {
         const customerData = {
+          id: 'customer12@gmail.com', // Using email as ID for now
           role: 'CUSTOMER',
           email: 'customer12@gmail.com',
           token: 'customer-token'

@@ -11,25 +11,25 @@ const HelpSupport = () => {
   const [connectionError, setConnectionError] = useState('');
   const { user } = useAuth();
 
-  // WebSocket connection setup
   useEffect(() => {
-    // Early return if no user ID
-    if (!user?.id) {
-      console.log('No user ID available, skipping connection setup');
+    // Early return if no user or not a CUSTOMER
+    if (!user?.email || user.role !== 'CUSTOMER') {
+      console.log('Invalid user data or not a customer, skipping connection setup');
+      setIsConnecting(false);
+      setIsConnected(false);
+      setConnectionError('Please log in as a customer to access the support chat.');
       return;
     }
 
-    console.log('Attempting to fetch messages...', user);
+    console.log('Setting up chat for customer:', user.email);
 
-    // Fetch messages for the customer
-    fetch(`http://localhost:8080/api/customer/messages/${user.id}`, {
+    // Fetch existing messages for this customer
+    fetch(`http://localhost:8080/api/customer/messages/${encodeURIComponent(user.email)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${user.token}`
-      },
-      credentials: 'include'
+        Accept: 'application/json'
+      }
     })
       .then((response) => {
         if (!response.ok) {
@@ -46,15 +46,12 @@ const HelpSupport = () => {
         setConnectionError('Failed to connect to server. Please try again later.');
       });
 
-    // Setup WebSocket
+    // Set up STOMP over WebSocket
     const wsUrl = 'ws://localhost:8080/ws';
     console.log('Setting up WebSocket connection to:', wsUrl);
 
     const client = new Client({
       brokerURL: wsUrl,
-      connectHeaders: {
-        Authorization: `Bearer ${user.token}`
-      },
       debug: function (str) {
         console.log('STOMP:', str);
       },
@@ -67,25 +64,22 @@ const HelpSupport = () => {
         setIsConnecting(false);
         setConnectionError('');
 
-        if (user?.id) {
-          this.subscribe(`/topic/messages/${user.id}`, (message) => {
-            console.log('Received message:', message);
-            try {
-              const receivedMsg = JSON.parse(message.body);
-              setMessages((prev) => [...prev, receivedMsg]);
-            } catch (err) {
-              console.error('Error parsing message:', err);
-            }
-          });
-        }
+        // Subscribe to a topic for this customer's email
+        this.subscribe(`/topic/messages/${user.email}`, (message) => {
+          console.log('Received message:', message);
+          try {
+            const receivedMsg = JSON.parse(message.body);
+            setMessages((prev) => [...prev, receivedMsg]);
+          } catch (err) {
+            console.error('Error parsing message:', err);
+          }
+        });
       },
       onStompError: function (frame) {
         console.error('STOMP error:', frame);
         setIsConnected(false);
         setIsConnecting(false);
-        setConnectionError(
-          'Connection error: ' + (frame.headers?.message || 'Unknown error')
-        );
+        setConnectionError('Connection error: ' + (frame.headers?.message || 'Unknown error'));
       },
       onWebSocketError: function (event) {
         console.error('WebSocket error:', event);
@@ -111,6 +105,7 @@ const HelpSupport = () => {
       setConnectionError('Failed to connect: ' + error.toString());
     }
 
+    // Cleanup on unmount
     return () => {
       if (client.active) {
         console.log('Cleaning up WebSocket connection...');
@@ -120,46 +115,51 @@ const HelpSupport = () => {
   }, [user]);
 
   const sendMessage = () => {
-    if (isConnected && inputMessage.trim() && user?.id) {
-      const messageData = {
-        senderId: user.id,
-        content: inputMessage.trim(),
-        timestamp: new Date().toISOString()
-      };
-
-      // Send via WebSocket
-      if (stompClient?.active) {
-        stompClient.publish({
-          destination: '/app/chat',
-          body: JSON.stringify(messageData)
-        });
-      }
-
-      // Also save via REST API
-      fetch('http://localhost:8080/api/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify(messageData)
-      })
-        .then((response) => {
-          if (!response.ok) throw new Error('Failed to save message');
-          return response.json();
-        })
-        .then((savedMessage) => {
-          console.log('Message saved:', savedMessage);
-          setMessages((prev) => [...prev, savedMessage]);
-          setInputMessage('');
-        })
-        .catch((error) => {
-          console.error('Error saving message:', error);
-          setConnectionError('Failed to send message. Please try again.');
-        });
-    } else if (!isConnected) {
+    if (!isConnected) {
       setConnectionError('Not connected to server. Please wait...');
+      return;
     }
+
+    if (!inputMessage.trim() || !user?.email) {
+      return;
+    }
+
+    const messageData = {
+      customerId: user.email,
+      content: inputMessage.trim(),
+      timestamp: new Date().getTime()
+    };
+
+    // Send via WebSocket
+    if (stompClient?.active) {
+      stompClient.publish({
+        destination: '/app/chat',
+        body: JSON.stringify(messageData)
+      });
+    }
+
+    // Also save via REST API
+    fetch('http://localhost:8080/api/customer/send-message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json'
+      },
+      body: JSON.stringify(messageData)
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to save message');
+        return response.json();
+      })
+      .then((savedMessage) => {
+        console.log('Message saved:', savedMessage);
+        setMessages((prev) => [...prev, savedMessage]);
+        setInputMessage('');
+      })
+      .catch((error) => {
+        console.error('Error saving message:', error);
+        setConnectionError('Failed to send message. Please try again.');
+      });
   };
 
   const checkConnection = () => {
@@ -189,6 +189,11 @@ const HelpSupport = () => {
             </div>
             <div>
               <h2 className="text-lg font-semibold dark:text-white">Admin Support</h2>
+              {user?.email && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Customer ID: {user.email}
+                </p>
+              )}
               <div className="flex items-center gap-2 mt-1">
                 <div
                   className={`w-3 h-3 rounded-full ${
@@ -211,28 +216,30 @@ const HelpSupport = () => {
                   {isConnecting
                     ? 'Connecting to server...'
                     : isConnected
-                    ? 'Connected - Online'
+                    ? `Connected - ${user?.email || 'Unknown'}`
                     : 'Disconnected - Offline'}
                 </span>
               </div>
             </div>
           </div>
-          <button
-            onClick={checkConnection}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              isConnecting
-                ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={checkConnection}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isConnecting
+                  ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                  : isConnected
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                  : 'bg-red-100 text-red-800 hover:bg-red-200'
+              } dark:bg-opacity-20 dark:hover:bg-opacity-30`}
+            >
+              {isConnecting
+                ? 'Connecting...'
                 : isConnected
-                ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                : 'bg-red-100 text-red-800 hover:bg-red-200'
-            } dark:bg-opacity-20 dark:hover:bg-opacity-30`}
-          >
-            {isConnecting
-              ? 'Connecting...'
-              : isConnected
-              ? 'Connection Healthy'
-              : 'Reconnect Now'}
-          </button>
+                ? 'Connection Healthy'
+                : 'Reconnect Now'}
+            </button>
+          </div>
         </div>
         {connectionError && (
           <div className="bg-red-100 text-red-800 px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 dark:bg-red-900 dark:text-red-100">
@@ -258,12 +265,32 @@ const HelpSupport = () => {
           <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
             <h3 className="text-lg font-medium">No messages yet</h3>
             <p className="text-sm">Start a conversation with the admin</p>
+            {user?.email && (
+              <p className="text-sm mt-2">Logged in as: {user.email}</p>
+            )}
           </div>
         ) : (
           messages.map((msg, index) => (
-            <div key={index} className="flex flex-col">
-              <div className="max-w-[80%] bg-blue-100 dark:bg-blue-900 rounded-lg p-3 text-gray-800 dark:text-gray-200">
+            <div
+              key={index}
+              className={`flex ${
+                msg.customerId === user?.email ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              <div
+                className={`max-w-[80%] rounded-lg p-3 ${
+                  msg.customerId === user?.email
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+                }`}
+              >
+                <div className="text-sm font-medium mb-1">
+                  {msg.customerId === user?.email ? 'You' : 'Admin'}
+                </div>
                 {typeof msg === 'string' ? msg : msg.content}
+                <div className="text-xs opacity-75 mt-1">
+                  {new Date(msg.timestamp).toLocaleTimeString()}
+                </div>
               </div>
             </div>
           ))
@@ -278,7 +305,7 @@ const HelpSupport = () => {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder={
-              isConnected ? 'Type a message...' : 'Waiting for connection...'
+              isConnected ? `Type a message as ${user?.email}...` : 'Waiting for connection...'
             }
             disabled={!isConnected}
             className="flex-1 px-4 py-2 rounded-full border dark:border-gray-600 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
