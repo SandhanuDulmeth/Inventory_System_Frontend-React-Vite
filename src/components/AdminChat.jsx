@@ -39,9 +39,30 @@ const AdminChat = () => {
         setStompClient(client);
 
         client.subscribe('/topic/messages', (message) => {
-          const newMsg = JSON.parse(message.body);
+          const receivedData = JSON.parse(message.body);
+          
+          // Handle deletion by ID (number)
+          if (typeof receivedData === 'number') {
+            const deletedMessageId = receivedData;
+            setMessages(prev => prev.filter(msg => msg.id !== deletedMessageId));
+            return;
+          }
+          
+          // Handle message updates/additions
+          const newMsg = receivedData;
           if (newMsg.customerId === selectedCustomer) {
-            setMessages(prev => [...prev, newMsg]);
+            setMessages(prev => {
+              const existingIndex = prev.findIndex(m => m.id === newMsg.id);
+              if (existingIndex !== -1) {
+                // Update existing message
+                const updatedMessages = [...prev];
+                updatedMessages[existingIndex] = newMsg;
+                return updatedMessages;
+              } else {
+                // Add new message
+                return [...prev, newMsg];
+              }
+            });
           }
         });
       },
@@ -101,20 +122,22 @@ const AdminChat = () => {
 
     setNewMessage('');
   };
- // 5) Correct delete message implementation
- const deleteMessage = async (messageId) => {
-  try {
-    const response = await fetch(`http://localhost:8080/messages/${messageId}`, {
-      method: 'DELETE'
-    });
-    
-    if (response.ok) {
+  // 5) Correct delete message implementation via STOMP
+  const deleteMessage = (messageId) => {
+    if (!window.confirm('Are you sure you want to delete this message?')) return;
+
+    // Send delete command via STOMP
+    if (stompClient?.connected) {
+      stompClient.publish({
+        destination: '/app/message/delete',
+        body: JSON.stringify(messageId)
+      });
+      // Optimistic UI update
       setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    } else {
+      console.error('Cannot delete message: STOMP client not connected');
     }
-  } catch (err) {
-    console.error('Error deleting message:', err);
-  }
-};
+  };
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -124,7 +147,7 @@ const AdminChat = () => {
   const renderMessage = (message) => {
     const isAdminMessage = message.user?.toUpperCase() === 'ADMIN';
     const isCustomerMessage = !isAdminMessage;
-
+    
     return (
       <div
         key={message.id}

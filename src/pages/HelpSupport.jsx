@@ -48,16 +48,23 @@ const HelpSupport = () => {
         setConnectionError('');
 
         client.subscribe('/topic/messages', (message) => {
-          const receivedMsg = JSON.parse(message.body);
-          if (receivedMsg.id && receivedMsg.customerId) {  // Proper message object
+          const receivedData = JSON.parse(message.body);
+          
+          if (typeof receivedData === 'number') {
+            // Handle deletion
+            const deletedId = receivedData;
+            setMessages(prev => prev.filter(msg => msg.id !== deletedId));
+            return;
+          }
+          
+          if (receivedData.id && receivedData.customerId) {
+            const receivedMsg = receivedData;
             if (receivedMsg.customerId === user.email) {
               setMessages(prev => {
-                const existingIndex = prev.findIndex((m) => m.id === receivedMsg.id);
+                const existingIndex = prev.findIndex(m => m.id === receivedMsg.id);
                 if (existingIndex !== -1) {
-                  // Perform an in-place update (map to update that one entry)
-                  return prev.map((m) => (m.id === receivedMsg.id ? receivedMsg : m));
+                  return prev.map(m => m.id === receivedMsg.id ? receivedMsg : m);
                 } else {
-                  // Add as a new message
                   return [...prev, receivedMsg];
                 }
               });
