@@ -4,7 +4,7 @@ import AdminChat from './AdminChat';
 const SlideOutPanel = ({ isOpen, onClose }) => {
   return (
     <div
-      className={`fixed right-0 top-0 h-full w-96 transform ${
+      className={`fixed right-0 top-0 h-full w-[70rem] transform ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       } transition-transform duration-300 ease-in-out bg-white shadow-lg flex flex-col`}
     >
