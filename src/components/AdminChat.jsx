@@ -15,7 +15,7 @@ const AdminChat = () => {
 
   // 1) Fetch initial list of customers who have messages
   useEffect(() => {
-    fetch('http://localhost:8080/api/admin/customers')
+    fetch('http://localhost:8080/customers')
       .then((res) => res.json())
       .then((data) => setCustomers(data))
       .catch((err) => console.error('Error loading customers:', err));
@@ -37,7 +37,15 @@ const AdminChat = () => {
         setIsConnecting(false);
         setConnectionError('');
         setStompClient(client);
+
+        client.subscribe('/topic/messages', (message) => {
+          const newMsg = JSON.parse(message.body);
+          if (newMsg.customerId === selectedCustomer) {
+            setMessages(prev => [...prev, newMsg]);
+          }
+        });
       },
+   
       onStompError: (frame) => {
         console.error('Admin STOMP error', frame);
         setIsConnected(false);
@@ -64,65 +72,49 @@ const AdminChat = () => {
         client.deactivate();
       }
     };
-  }, [user]);
+  }, [user, selectedCustomer]);
 
   // 3) Enhanced chat history fetch with subscription management
-  const [currentSubscription, setCurrentSubscription] = useState(null);
   const fetchChatHistory = (customerId) => {
     setSelectedCustomer(customerId);
-
-    // Unsubscribe from previous subscription
-    if (currentSubscription) {
-      currentSubscription.unsubscribe();
-    }
-
-    fetch(`http://localhost:8080/api/admin/chat/${customerId}`)
+    
+    fetch(`http://localhost:8080/chat/${customerId}`)
       .then((res) => res.json())
-      .then((data) => {
-        setMessages(data || []);
-        if (stompClient && stompClient.connected) {
-          const sub = stompClient.subscribe(
-            `/topic/messages/${customerId}`,
-            (msg) => {
-              const newMsg = JSON.parse(msg.body);
-              setMessages((prev) => [...prev, newMsg]);
-            }
-          );
-          setCurrentSubscription(sub);
-        }
-      })
+      .then((data) => setMessages(data || []))
       .catch((err) => console.error('Error fetching chat history:', err));
   };
-
   // 4) Enhanced message sending with status checks
-  const sendMessage = async (e) => {
+  const sendMessage = (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedCustomer) return;
+    if (!newMessage.trim() || !selectedCustomer || !stompClient?.connected) return;
 
     const messageData = {
       customerId: selectedCustomer,
       content: newMessage.trim(),
-      timestamp: Date.now(),
-      user: 'ADMIN' // Explicitly set user type
+      user: 'ADMIN'
     };
 
-    try {
-      // Send via REST API
-      const response = await fetch('http://localhost:8080/api/admin/send-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(messageData)
-      });
+    stompClient.publish({
+      destination: '/app/chat',
+      body: JSON.stringify(messageData)
+    });
 
-      if (!response.ok) throw new Error('Failed to send message');
-      
-      // Clear input field
-      setNewMessage('');
-    } catch (err) {
-      console.error('Error sending message:', err);
-    }
+    setNewMessage('');
   };
-
+ // 5) Correct delete message implementation
+ const deleteMessage = async (messageId) => {
+  try {
+    const response = await fetch(`http://localhost:8080/messages/${messageId}`, {
+      method: 'DELETE'
+    });
+    
+    if (response.ok) {
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    }
+  } catch (err) {
+    console.error('Error deleting message:', err);
+  }
+};
   // Modified message rendering
   const renderMessage = (message) => {
     const isAdminMessage = message.user?.toUpperCase() === 'ADMIN';
@@ -144,14 +136,12 @@ const AdminChat = () => {
             {isCustomerMessage ? 'Customer' : 'Admin'}
           </div>
           <p className="break-words">{message.content}</p>
-          {isCustomerMessage && (
-            <button
-              onClick={() => deleteMessage(message.id)}
-              className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs"
-            >
-              Delete
-            </button>
-          )}
+          <button
+            onClick={() => deleteMessage(message.id)}
+            className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs"
+          >
+            Delete
+          </button>
           <p className="text-xs mt-1 opacity-70">
             {new Date(message.timestamp).toLocaleString()}
           </p>
@@ -159,7 +149,7 @@ const AdminChat = () => {
       </div>
     );
   };
-
+ 
   // Modified chat area JSX
   return (
     <div className="flex h-full bg-gray-50">
@@ -213,7 +203,7 @@ const AdminChat = () => {
       </div>
 
       {/* Enhanced Chat Area */}
-      <div className="flex-1 flex flex-col bg-white h-[calc(100vh-3rem)]">
+      <div className="flex-1 flex flex-col bg-white">
         {selectedCustomer ? (
           <>
             <div className="p-4 border-b bg-white">
@@ -226,7 +216,7 @@ const AdminChat = () => {
               {messages.map((message) => renderMessage(message))}
             </div>
 
-            <form onSubmit={sendMessage} className="sticky bottom-0 p-4 border-t bg-white">
+            <form onSubmit={sendMessage} className="p-4 border-t bg-white">
               <div className="flex space-x-2">
                 <input
                   type="text"

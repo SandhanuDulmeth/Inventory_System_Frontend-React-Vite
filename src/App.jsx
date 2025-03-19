@@ -3,7 +3,7 @@
 import { BrowserRouter } from 'react-router-dom'
 import './App.css'
 import { AuthProvider } from './context/AuthContext'
-import { ChatProvider } from './context/ChatContext'
+
 import { ThemeProvider } from './context/ThemeContext'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './pages/Login'
@@ -16,7 +16,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ChatProvider>
+    
           <BrowserRouter>
             <div className="min-h-screen bg-base-100">
               <Routes>
@@ -50,7 +50,7 @@ function App() {
               </Routes>
             </div>
           </BrowserRouter>
-        </ChatProvider>
+   
       </AuthProvider>
     </ThemeProvider>
   )

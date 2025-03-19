@@ -8,7 +8,6 @@ import Suppliers from '../pages/Suppliers';
 import Reports from '../pages/Reports';
 import HelpSupport from '../pages/HelpSupport';
 import Analysis from '../pages/Analysis';
-import CustomerChat from './CustomerChat';
 import { useTheme } from '../context/ThemeContext';
 
 const CustomerLayout = () => {

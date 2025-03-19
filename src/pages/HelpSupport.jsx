@@ -14,7 +14,6 @@ const HelpSupport = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    // Early return if no user or not a CUSTOMER
     if (!user?.email || user.role !== 'CUSTOMER') {
       console.log('Invalid user data or not a customer, skipping connection setup');
       setIsConnecting(false);
@@ -22,58 +21,40 @@ const HelpSupport = () => {
       setConnectionError('Please log in as a customer to access the support chat.');
       return;
     }
-
     console.log('Setting up chat for customer:', user.email);
 
-    // Fetch existing messages
-    fetch(`http://localhost:8080/api/customer/messages/${encodeURIComponent(user.email)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      }
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok: ' + response.status);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log('Fetched messages:', data);
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/chat/${encodeURIComponent(user.email)}`);
+        if (!response.ok) throw new Error('Failed to fetch messages');
+        const data = await response.json();
         setMessages(data || []);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error('Error fetching messages:', error);
-        setConnectionError('Failed to connect to server. Please try again later.');
-      });
+        setConnectionError('Failed to load chat history');
+      }
+    };
 
-    // Set up STOMP over WebSocket
-    const wsUrl = 'ws://localhost:8080/ws';
-    console.log('Setting up WebSocket connection to:', wsUrl);
-
+    fetchMessages();
+  
     const client = new Client({
-      brokerURL: wsUrl,
-      debug: function (str) {
-        console.log('STOMP:', str);
-      },
+      brokerURL: 'ws://localhost:8080/ws',
+      debug: (str) => console.log('STOMP:', str),
       reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      onConnect: function (frame) {
-        console.log('STOMP Connected:', frame);
+      onConnect: () => {
         setIsConnected(true);
         setIsConnecting(false);
         setConnectionError('');
 
-        // Subscribe to a topic for this customer's email
-        this.subscribe(`/topic/messages/${user.email}`, (message) => {
-          console.log('Received message:', message);
-          try {
-            const receivedMsg = JSON.parse(message.body);
-            setMessages((prev) => [...prev, receivedMsg]);
-          } catch (err) {
-            console.error('Error parsing message:', err);
+        client.subscribe('/topic/messages', (message) => {
+          const receivedMsg = JSON.parse(message.body);
+          if (receivedMsg.customerId === user.email) {
+            setMessages(prev => {
+              const existing = prev.find(m => m.id === receivedMsg.id);
+              return existing 
+                ? prev.map(m => m.id === receivedMsg.id ? receivedMsg : m)
+                : [...prev, receivedMsg];
+            });
           }
         });
       },
@@ -99,113 +80,51 @@ const HelpSupport = () => {
       }
     });
 
-    try {
-      console.log('Activating STOMP client...');
-      client.activate();
-      setStompClient(client);
-    } catch (error) {
-      console.error('Error activating client:', error);
-      setIsConnecting(false);
-      setConnectionError('Failed to connect: ' + error.toString());
-    }
+    client.activate();
+    setStompClient(client);
 
-    // Cleanup on unmount
-    return () => {
-      if (client.active) {
-        console.log('Cleaning up WebSocket connection...');
-        client.deactivate();
-      }
-    };
+    return () => client.deactivate();
   }, [user]);
 
   const sendMessage = () => {
-    if (!isConnected) {
-      setConnectionError('Not connected to server. Please wait...');
-      return;
-    }
+    if (!isConnected || !inputMessage.trim() || !user?.email) return;
 
-    if (!inputMessage.trim() || !user?.email) {
-      return;
-    }
-
-    const messageData = {
+    const messageDTO = {
       customerId: user.email,
       content: inputMessage.trim(),
-      timestamp: new Date().getTime(),
-      userType: 'CUSTOMER' // Added userType field
+      user: 'CUSTOMER'
     };
 
-    // Send via WebSocket (if connected)
-    if (stompClient?.active) {
-      stompClient.publish({
-        destination: '/app/chat',
-        body: JSON.stringify(messageData)
-      });
-    }
+    stompClient.publish({
+      destination: '/app/chat',
+      body: JSON.stringify(messageDTO)
+    });
 
-    // Also save via REST API
-    fetch('http://localhost:8080/api/customer/send-message', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      },
-      body: JSON.stringify(messageData)
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error('Failed to save message');
-        return response.json();
-      })
-      .then((savedMessage) => {
-        console.log('Message saved:', savedMessage);
-        setMessages((prev) => [...prev, savedMessage]);
-        setInputMessage('');
-      })
-      .catch((error) => {
-        console.error('Error saving message:', error);
-        setConnectionError('Failed to send message. Please try again.');
-      });
-  };
-
-  const checkConnection = () => {
-    if (isConnected) {
-      alert('We are still connected to the server!');
-    } else {
-      alert('We are not connected to the server right now.');
-    }
-  };
-
-  const handleEditMessage = (messageId, content) => {
-    setEditingMessageId(messageId);
-    setEditingContent(content);
+    setInputMessage('');
   };
 
   const saveEditedMessage = async (messageId) => {
     if (!editingContent.trim()) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/customer/messages/${messageId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        },
-        body: JSON.stringify({
-          customerId: user.email,
-          content: editingContent.trim(),
-          timestamp: new Date().getTime()
-        })
+      const messageDTO = {
+        id: messageId,
+        customerId: user.email,
+        content: editingContent.trim(),
+        user: 'CUSTOMER'
+      };
+
+      // Update via WebSocket
+      stompClient.publish({
+        destination: '/app/chat/update',
+        body: JSON.stringify(messageDTO)
       });
 
-      if (!response.ok) throw new Error('Failed to update message');
-
-      const updatedMessage = await response.json();
-      setMessages(messages.map((msg) => (msg.id === messageId ? updatedMessage : msg)));
       setEditingMessageId(null);
       setEditingContent('');
     } catch (error) {
       console.error('Error updating message:', error);
-      setConnectionError('Failed to update message. Please try again.');
+      setConnectionError('Failed to update message');
     }
   };
 
@@ -213,7 +132,7 @@ const HelpSupport = () => {
     if (!window.confirm('Are you sure you want to delete this message?')) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/customer/messages/${messageId}`, {
+      const response = await fetch(`http://localhost:8080/messages/${messageId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -227,6 +146,21 @@ const HelpSupport = () => {
     } catch (error) {
       console.error('Error deleting message:', error);
       setConnectionError('Failed to delete message. Please try again.');
+    }
+  };
+
+  const checkConnection = () => {
+    if (stompClient) {
+      if (stompClient.connected) {
+        setIsConnected(true);
+        setIsConnecting(false);
+        setConnectionError('');
+      } else {
+        setIsConnected(false);
+        setIsConnecting(true);
+        setConnectionError('Reconnecting...');
+        stompClient.activate();
+      }
     }
   };
 
