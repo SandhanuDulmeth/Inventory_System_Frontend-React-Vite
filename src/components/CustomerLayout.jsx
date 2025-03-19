@@ -17,21 +17,20 @@ const CustomerLayout = () => {
 
   return (
     <div className={`flex flex-col h-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Top Navigation */}
+  
       <div className="flex-none">
         <NavBar />
       </div>
 
-      {/* Main Content Area */}
+ 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar Menu - Always visible */}
+    
         <div className={`w-64 border-r shadow-sm transition-colors duration-200 ${
           theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
         }`}>
           <Menu />
         </div>
 
-        {/* Content Area */}
         <div className={`flex-1 overflow-auto transition-colors duration-200 ${
           theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
         }`}>

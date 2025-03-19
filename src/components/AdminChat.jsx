@@ -106,7 +106,7 @@ const AdminChat = () => {
   };
   // 4) Enhanced message sending with status checks
   const sendMessage = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault(); // We'll trigger it manually on Enter press
     if (!newMessage.trim() || !selectedCustomer || !stompClient?.connected) return;
 
     const messageData = {
@@ -122,17 +122,24 @@ const AdminChat = () => {
 
     setNewMessage('');
   };
-  // 5) Correct delete message implementation via STOMP
+
+  const handleKeyDown = (e) => {
+    // SHIFT+Enter -> new line; Enter alone -> send message
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+  
   const deleteMessage = (messageId) => {
     if (!window.confirm('Are you sure you want to delete this message?')) return;
-
-    // Send delete command via STOMP
+    
     if (stompClient?.connected) {
       stompClient.publish({
         destination: '/app/message/delete',
         body: JSON.stringify(messageId)
       });
-      // Optimistic UI update
+      
       setMessages(prev => prev.filter(msg => msg.id !== messageId));
     } else {
       console.error('Cannot delete message: STOMP client not connected');
@@ -143,7 +150,7 @@ const AdminChat = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
-  // Modified message rendering
+
   const renderMessage = (message) => {
     const isAdminMessage = message.user?.toUpperCase() === 'ADMIN';
     const isCustomerMessage = !isAdminMessage;
@@ -163,7 +170,7 @@ const AdminChat = () => {
           <div className="text-sm font-medium mb-1">
             {isCustomerMessage ? 'Customer' : 'Admin'}
           </div>
-          <p className="break-words">{message.content}</p>
+          <p className="break-words whitespace-pre-wrap">{message.content}</p>
           <button
             onClick={() => deleteMessage(message.id)}
             className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs"
@@ -178,11 +185,10 @@ const AdminChat = () => {
     );
   };
  
-  // Modified chat area JSX
+
   return (
     <div className="flex h-full bg-gray-50">
       {/* Customer List Sidebar */}
-      {/* <div className="w-80 bg-white border-r shadow-sm"> */}
       <div className="w-80 bg-white border-r shadow-sm flex flex-col">
       <div className="p-4 border-b bg-white flex items-center justify-between sticky top-0 z-10">
           <h2 className="text-lg font-semibold text-gray-800">Customers</h2>
@@ -247,13 +253,20 @@ const AdminChat = () => {
            </div>
            
             <form onSubmit={sendMessage} className="p-4 border-t bg-white">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
+              <div className="flex gap-2">
+                <textarea
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1 border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={handleKeyDown}
+                  placeholder="Press SHIFT+Enter for a new line. Enter sends the message."
+                  className="flex-1 border rounded-lg px-4 py-2 min-h-[44px] max-h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ overflow: 'hidden', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}
+                  rows={1}
+                  onInput={(e) => {
+                    // Auto-resize textarea based on content
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+                  }}
                 />
                 <button
                   type="submit"

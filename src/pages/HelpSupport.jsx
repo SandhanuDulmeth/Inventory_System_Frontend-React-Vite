@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 const HelpSupport = () => {
   const [messages, setMessages] = useState([]);
@@ -12,6 +13,8 @@ const HelpSupport = () => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingContent, setEditingContent] = useState('');
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -198,10 +201,13 @@ const HelpSupport = () => {
         className={`flex ${isCustomerMessage ? 'justify-start' : 'justify-end'}`}
       >
         <div
-          className={`max-w-[80%] rounded-lg p-3 relative group ${isCustomerMessage
-              ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+          className={`max-w-[80%] rounded-lg p-3 relative group ${
+            isCustomerMessage
+              ? isDark
+                ? 'bg-gray-800 text-gray-200'
+                : 'bg-gray-100 text-gray-800'
               : 'bg-blue-500 text-white'
-            }`}
+          }`}
         >
           <div className="text-sm font-medium mb-1">
             {isCustomerMessage ? 'Customer' : 'Admin'}
@@ -286,18 +292,30 @@ const HelpSupport = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-white dark:bg-gray-900">
+    <div
+      className={`flex flex-col h-screen ${
+        isDark ? 'bg-gray-900 text-gray-200' : 'bg-white text-gray-900'
+      }`}
+    >
       {/* Header */}
-      <div className="border-b dark:border-gray-700">
+      <div
+        className={`border-b ${
+          isDark ? 'border-gray-700' : 'border-gray-300'
+        }`}
+      >
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-4">
             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
               <span className="text-white text-lg font-semibold">A</span>
             </div>
             <div>
-              <h2 className="text-lg font-semibold dark:text-white">Admin Support</h2>
+              <h2 className="text-lg font-semibold">Admin Support</h2>
               {user?.email && (
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p
+                  className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}
+                >
                   Customer ID: {user.email}
                 </p>
               )}
@@ -311,12 +329,19 @@ const HelpSupport = () => {
                     }`}
                 />
                 <span
-                  className={`text-sm font-medium ${isConnecting
-                    ? 'text-yellow-600 dark:text-yellow-400'
-                    : isConnected
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                    }`}
+                  className={`text-sm font-medium ${
+                    isConnecting
+                      ? isDark
+                        ? 'text-yellow-400'
+                        : 'text-yellow-600'
+                      : isConnected
+                      ? isDark
+                        ? 'text-green-400'
+                        : 'text-green-600'
+                      : isDark
+                      ? 'text-red-400'
+                      : 'text-red-600'
+                  }`}
                 >
                   {isConnecting
                     ? 'Connecting to server...'
@@ -330,12 +355,19 @@ const HelpSupport = () => {
           <div className="flex flex-col items-end gap-2">
             <button
               onClick={checkConnection}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isConnecting
-                ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                : isConnected
-                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                  : 'bg-red-100 text-red-800 hover:bg-red-200'
-                } dark:bg-opacity-20 dark:hover:bg-opacity-30`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isConnecting
+                  ? isDark
+                    ? 'bg-yellow-200 text-yellow-800'
+                    : 'bg-yellow-100 text-yellow-800'
+                  : isConnected
+                  ? isDark
+                    ? 'bg-green-200 text-green-800'
+                    : 'bg-green-100 text-green-800'
+                  : isDark
+                  ? 'bg-red-200 text-red-800'
+                  : 'bg-red-100 text-red-800'
+              }`}
             >
               {isConnecting
                 ? 'Connecting...'
@@ -346,7 +378,13 @@ const HelpSupport = () => {
           </div>
         </div>
         {connectionError && (
-          <div className="bg-red-100 text-red-800 px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 dark:bg-red-900 dark:text-red-100">
+          <div
+            className={`px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 ${
+              isDark
+                ? 'bg-red-900 text-red-100'
+                : 'bg-red-100 text-red-800'
+            }`}
+          >
             <svg
               className="w-4 h-4 flex-shrink-0"
               fill="currentColor"
@@ -366,7 +404,11 @@ const HelpSupport = () => {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+          <div
+            className={`flex flex-col items-center justify-center h-full ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`}
+          >
             <h3 className="text-lg font-medium">No messages yet</h3>
             <p className="text-sm">Start a conversation with the admin</p>
             {user?.email && (
@@ -380,7 +422,11 @@ const HelpSupport = () => {
       </div>
 
       {/* Input Area */}
-      <div className="border-t dark:border-gray-700 p-4">
+      <div
+        className={`p-4 border-t ${
+          isDark ? 'border-gray-700' : 'border-gray-300'
+        }`}
+      >
         <div className="flex gap-2">
           <textarea
             value={inputMessage}
@@ -391,7 +437,11 @@ const HelpSupport = () => {
                 : 'Waiting for connection...'
             }
             disabled={!isConnected}
-            className="flex-1 px-4 py-2 rounded-lg border dark:border-gray-600 dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none min-h-[44px] max-h-32"
+            className={`flex-1 px-4 py-2 rounded-lg border resize-none min-h-[44px] max-h-32 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isDark
+                ? 'bg-gray-800 text-white border-gray-600'
+                : 'bg-white border-gray-300 text-black'
+            }`}
             onKeyDown={(e) => {
               // ENTER sends if SHIFT not pressed, SHIFT+ENTER adds a newline
               if (e.key === 'Enter' && !e.shiftKey) {
