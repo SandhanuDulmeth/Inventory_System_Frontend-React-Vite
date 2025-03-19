@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,6 +12,7 @@ const HelpSupport = () => {
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editingContent, setEditingContent] = useState('');
   const { user } = useAuth();
+  const messagesEndRef = useRef(null);
 
   useEffect(() => {
     if (!user?.email || user.role !== 'CUSTOMER') {
@@ -36,7 +37,7 @@ const HelpSupport = () => {
     };
 
     fetchMessages();
-  
+
     const client = new Client({
       brokerURL: 'ws://localhost:8080/ws',
       debug: (str) => console.log('STOMP:', str),
@@ -48,13 +49,19 @@ const HelpSupport = () => {
 
         client.subscribe('/topic/messages', (message) => {
           const receivedMsg = JSON.parse(message.body);
-          if (receivedMsg.customerId === user.email) {
-            setMessages(prev => {
-              const existing = prev.find(m => m.id === receivedMsg.id);
-              return existing 
-                ? prev.map(m => m.id === receivedMsg.id ? receivedMsg : m)
-                : [...prev, receivedMsg];
-            });
+          if (receivedMsg.id && receivedMsg.customerId) {  // Proper message object
+            if (receivedMsg.customerId === user.email) {
+              setMessages(prev => {
+                const existingIndex = prev.findIndex((m) => m.id === receivedMsg.id);
+                if (existingIndex !== -1) {
+                  // Perform an in-place update (map to update that one entry)
+                  return prev.map((m) => (m.id === receivedMsg.id ? receivedMsg : m));
+                } else {
+                  // Add as a new message
+                  return [...prev, receivedMsg];
+                }
+              });
+            }
           }
         });
       },
@@ -86,6 +93,17 @@ const HelpSupport = () => {
     return () => client.deactivate();
   }, [user]);
 
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  const startEditing = (messageId, content) => {
+    setEditingMessageId(messageId);
+    setEditingContent(content);
+  };
+
   const sendMessage = () => {
     if (!isConnected || !inputMessage.trim() || !user?.email) return;
 
@@ -103,18 +121,17 @@ const HelpSupport = () => {
     setInputMessage('');
   };
 
-  const saveEditedMessage = async (messageId) => {
+  const handleEditMessage = async () => {
     if (!editingContent.trim()) return;
 
     try {
       const messageDTO = {
-        id: messageId,
+        id: editingMessageId,
         customerId: user.email,
         content: editingContent.trim(),
         user: 'CUSTOMER'
       };
 
-      // Update via WebSocket
       stompClient.publish({
         destination: '/app/chat/update',
         body: JSON.stringify(messageDTO)
@@ -128,25 +145,17 @@ const HelpSupport = () => {
     }
   };
 
-  const handleDeleteMessage = async (messageId) => {
+  const handleDeleteMessage = (messageId) => {
     if (!window.confirm('Are you sure you want to delete this message?')) return;
 
-    try {
-      const response = await fetch(`http://localhost:8080/messages/${messageId}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json'
-        }
-      });
+    // Send delete command via WebSocket
+    stompClient.publish({
+      destination: '/app/message/delete',
+      body: JSON.stringify(messageId)
+    });
 
-      if (!response.ok) throw new Error('Failed to delete message');
-
-      setMessages(messages.filter((msg) => msg.id !== messageId));
-    } catch (error) {
-      console.error('Error deleting message:', error);
-      setConnectionError('Failed to delete message. Please try again.');
-    }
+    // Optimistic UI update
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
   };
 
   const checkConnection = () => {
@@ -182,11 +191,10 @@ const HelpSupport = () => {
         className={`flex ${isCustomerMessage ? 'justify-start' : 'justify-end'}`}
       >
         <div
-          className={`max-w-[80%] rounded-lg p-3 relative group ${
-            isCustomerMessage
+          className={`max-w-[80%] rounded-lg p-3 relative group ${isCustomerMessage
               ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200'
               : 'bg-blue-500 text-white'
-          }`}
+            }`}
         >
           <div className="text-sm font-medium mb-1">
             {isCustomerMessage ? 'Customer' : 'Admin'}
@@ -203,7 +211,7 @@ const HelpSupport = () => {
               />
               <div className="flex gap-2">
                 <button
-                  onClick={() => saveEditedMessage(msg.id)}
+                  onClick={() => handleEditMessage(msg.id)}
                   className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
                 >
                   Save
@@ -226,7 +234,7 @@ const HelpSupport = () => {
               {isCustomerMessage && (
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
                   <button
-                    onClick={() => handleEditMessage(msg.id, msg.content)}
+                    onClick={() => startEditing(msg.id, msg.content)}
                     className="p-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <svg
@@ -289,18 +297,18 @@ const HelpSupport = () => {
               <div className="flex items-center gap-2 mt-1">
                 <div
                   className={`w-3 h-3 rounded-full ${isConnecting
-                      ? 'bg-yellow-500 animate-pulse'
-                      : isConnected
-                        ? 'bg-green-500'
-                        : 'bg-red-500'
+                    ? 'bg-yellow-500 animate-pulse'
+                    : isConnected
+                      ? 'bg-green-500'
+                      : 'bg-red-500'
                     }`}
                 />
                 <span
                   className={`text-sm font-medium ${isConnecting
-                      ? 'text-yellow-600 dark:text-yellow-400'
-                      : isConnected
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : isConnected
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
                     }`}
                 >
                   {isConnecting
@@ -316,10 +324,10 @@ const HelpSupport = () => {
             <button
               onClick={checkConnection}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isConnecting
-                  ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                  : isConnected
-                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                    : 'bg-red-100 text-red-800 hover:bg-red-200'
+                ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                : isConnected
+                  ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                  : 'bg-red-100 text-red-800 hover:bg-red-200'
                 } dark:bg-opacity-20 dark:hover:bg-opacity-30`}
             >
               {isConnecting
@@ -361,6 +369,7 @@ const HelpSupport = () => {
         ) : (
           messages.map((msg) => renderMessage(msg))
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
@@ -395,8 +404,8 @@ const HelpSupport = () => {
             onClick={sendMessage}
             disabled={!isConnected}
             className={`px-6 py-2 rounded-full font-medium transition-colors ${isConnected
-                ? 'bg-blue-500 hover:bg-blue-600 text-white'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-blue-500 hover:bg-blue-600 text-white'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             Send

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState,useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,7 +12,7 @@ const AdminChat = () => {
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState('');
   const { user } = useAuth();
-
+  const messagesEndRef = useRef(null);
   // 1) Fetch initial list of customers who have messages
   useEffect(() => {
     fetch('http://localhost:8080/customers')
@@ -115,6 +115,11 @@ const AdminChat = () => {
     console.error('Error deleting message:', err);
   }
 };
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
   // Modified message rendering
   const renderMessage = (message) => {
     const isAdminMessage = message.user?.toUpperCase() === 'ADMIN';
@@ -154,8 +159,9 @@ const AdminChat = () => {
   return (
     <div className="flex h-full bg-gray-50">
       {/* Customer List Sidebar */}
-      <div className="w-80 bg-white border-r shadow-sm">
-        <div className="p-4 border-b bg-white flex items-center justify-between">
+      {/* <div className="w-80 bg-white border-r shadow-sm"> */}
+      <div className="w-80 bg-white border-r shadow-sm flex flex-col">
+      <div className="p-4 border-b bg-white flex items-center justify-between sticky top-0 z-10">
           <h2 className="text-lg font-semibold text-gray-800">Customers</h2>
           {/* Added Connection Status */}
           <div className="flex items-center gap-2">
@@ -214,8 +220,9 @@ const AdminChat = () => {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
               {messages.map((message) => renderMessage(message))}
-            </div>
-
+              <div ref={messagesEndRef} />
+           </div>
+           
             <form onSubmit={sendMessage} className="p-4 border-t bg-white">
               <div className="flex space-x-2">
                 <input
