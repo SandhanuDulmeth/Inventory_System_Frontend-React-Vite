@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 
-const InventoryManagement = () => {
+const InventoryManagementAddItem = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -25,4 +25,4 @@ const InventoryManagement = () => {
   );
 };
 
-export default InventoryManagement; 
+export default InventoryManagementAddItem; 

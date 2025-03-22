@@ -1,12 +1,20 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { useState } from 'react';
 
 const menuItems = [
   {
     title: "Main",
     items: [
       { label: "Home", href: "/customer", icon: "home" },
-      { label: "Inventory Management", href: "/customer/inventory", icon: "inventory" },
+      { 
+        label: "Inventory Management ▽ ", 
+        icon: "inventory",
+        subItems: [
+          { label: "Add Item", href: "/customer/inventory/add-item" },
+          { label: "Show Items", href: "/customer/inventory/show-items" },
+        ],
+      },
       { label: "Orders", href: "/customer/orders", icon: "orders" },
       { label: "Suppliers", href: "/customer/suppliers", icon: "suppliers" },
       { label: "Reports", href: "/customer/reports", icon: "reports" },
@@ -133,6 +141,11 @@ const icons = {
 
 const Menu = () => {
   const { theme } = useTheme();
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+
+  const toggleInventory = () => {
+    setIsInventoryOpen(!isInventoryOpen);
+  };
 
   return (
     <div className="h-full py-6 px-4">
@@ -144,18 +157,36 @@ const Menu = () => {
             {i.title}
           </span>
           {i.items.map((item) => (
-            <Link 
-              to={item.href} 
-              key={item.label} 
-              className={`flex items-center gap-4 px-2 py-3 rounded-lg transition-colors ${
-                theme === 'dark' 
-                  ? 'text-gray-300 hover:bg-gray-700' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {icons[item.icon]}
-              <span className="text-sm font-medium">{item.label}</span>
-            </Link>
+            <div key={item.label}>
+              <div 
+                onClick={item.subItems ? toggleInventory : null} 
+                className={`flex items-center gap-4 px-2 py-3 rounded-lg transition-colors cursor-pointer ${
+                  theme === 'dark' 
+                    ? 'text-gray-300 hover:bg-gray-700' 
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                {icons[item.icon]}
+                <span className="text-sm font-medium">{item.label}</span>
+              </div>
+              {item.subItems && isInventoryOpen && (
+                <div className="ml-6 flex flex-col gap-2">
+                  {item.subItems.map((subItem) => (
+                    <Link 
+                      to={subItem.href} 
+                      key={subItem.label} 
+                      className={`flex items-center gap-4 px-2 py-2 rounded-lg transition-colors ${
+                        theme === 'dark' 
+                          ? 'text-gray-300 hover:bg-gray-700' 
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      <span className="text-sm font-medium">{subItem.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </div>
       ))}

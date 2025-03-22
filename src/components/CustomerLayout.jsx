@@ -2,7 +2,8 @@ import { Routes, Route, useLocation } from 'react-router-dom';
 import NavBar from './NavBar';
 import Menu from './Menu';
 import Home from '../pages/Home';
-import InventoryManagement from '../pages/InventoryManagement';
+import InventoryManagementAddItem from '../pages/InventoryManagementaddItem';
+import InventoryManagementShowItems from '../pages/InventoryManagementShowItems';
 import Orders from '../pages/Orders';
 import Suppliers from '../pages/Suppliers';
 import Reports from '../pages/Reports';
@@ -43,7 +44,8 @@ const CustomerLayout = () => {
               }`}>
                 <Routes>
                   <Route index element={<Home />} />
-                  <Route path="inventory" element={<InventoryManagement />} />
+                  <Route path="inventory/add-item" element={<InventoryManagementAddItem />} />
+                  <Route path="inventory/show-items" element={<InventoryManagementShowItems />} />
                   <Route path="orders" element={<Orders />} />
                   <Route path="suppliers" element={<Suppliers />} />
                   <Route path="reports" element={<Reports />} />
@@ -58,4 +60,4 @@ const CustomerLayout = () => {
   );
 };
 
-export default CustomerLayout; 
+export default CustomerLayout;
