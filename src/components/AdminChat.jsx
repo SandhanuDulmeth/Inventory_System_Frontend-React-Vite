@@ -1,4 +1,4 @@
-import React, { useEffect, useState,useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,12 +13,16 @@ const AdminChat = () => {
   const [connectionError, setConnectionError] = useState('');
   const { user } = useAuth();
   const messagesEndRef = useRef(null);
+
   // 1) Fetch initial list of customers who have messages
   useEffect(() => {
     fetch('http://localhost:8080/customers')
       .then((res) => res.json())
-      .then((data) => setCustomers(data))
-      .catch((err) => console.error('Error loading customers:', err));
+      .then((data) => setCustomers(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        console.error('Error loading customers:', err);
+        setCustomers([]);
+      });
   }, []);
 
   // 2) Enhanced STOMP client setup with connection status
@@ -221,7 +225,7 @@ const AdminChat = () => {
           </div>
         </div>
         <div className="overflow-y-auto h-[calc(100vh-4rem)]">
-          {customers.map((custEmail) => (
+          {Array.isArray(customers) && customers.map((custEmail) => (
             <div
               key={custEmail}
               className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${

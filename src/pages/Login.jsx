@@ -20,6 +20,9 @@ const Login = () => {
       const emailResponse = await fetch(
         `http://localhost:8080/admin/check-email?email=${credentials.email}`
       );
+      if (!emailResponse.ok) {
+        throw new Error('Failed to check email');
+      }
       const isEmailValid = await emailResponse.json();
 
       if (isEmailValid) {
@@ -27,6 +30,9 @@ const Login = () => {
         const passwordResponse = await fetch(
           `http://localhost:8080/admin/check-password?email=${credentials.email}&password=${credentials.password}`
         );
+        if (!passwordResponse.ok) {
+          throw new Error('Failed to check password');
+        }
         const isPasswordValid = await passwordResponse.json();
 
         if (isPasswordValid) {
