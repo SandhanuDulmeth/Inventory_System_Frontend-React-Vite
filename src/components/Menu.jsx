@@ -158,17 +158,19 @@ const Menu = () => {
           </span>
           {i.items.map((item) => (
             <div key={item.label}>
-              <div 
-                onClick={item.subItems ? toggleInventory : null} 
-                className={`flex items-center gap-4 px-2 py-3 rounded-lg transition-colors cursor-pointer ${
-                  theme === 'dark' 
-                    ? 'text-gray-300 hover:bg-gray-700' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {icons[item.icon]}
-                <span className="text-sm font-medium">{item.label}</span>
-              </div>
+              <Link to={item.href}>
+                <div 
+                  onClick={item.subItems ? toggleInventory : null} 
+                  className={`flex items-center gap-4 px-2 py-3 rounded-lg transition-colors cursor-pointer ${
+                    theme === 'dark' 
+                      ? 'text-gray-300 hover:bg-gray-700' 
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {icons[item.icon]}
+                  <span className="text-sm font-medium">{item.label}</span>
+                </div>
+              </Link>
               {item.subItems && isInventoryOpen && (
                 <div className="ml-6 flex flex-col gap-2">
                   {item.subItems.map((subItem) => (

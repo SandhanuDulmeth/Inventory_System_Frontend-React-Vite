@@ -17,6 +17,7 @@ const AdminDashboard = () => {
     // Fetch admin dashboard data
     const fetchDashboardData = async () => {
       try {
+        //Input the Total Users, Total Orders, and Total Products
         const response = await fetch('http://localhost:8080/api/admin/dashboard', {
           headers: {
             'Authorization': `Bearer ${user.token}`,
