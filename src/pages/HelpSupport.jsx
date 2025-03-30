@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { v4 as uuidv4 } from 'uuid';
 
 const HelpSupport = () => {
   const [messages, setMessages] = useState([]);
@@ -16,6 +17,29 @@ const HelpSupport = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const messagesEndRef = useRef(null);
+  const [customerId, setCustomerId] = useState(null);
+
+  const customerIdRef = useRef();
+  customerIdRef.current = customerId;
+
+
+  const addTempMessage = (content) => {
+    const tempMessage = {
+      id: uuidv4(),
+      customerId,
+      content,
+      senderType: 'CUSTOMER',
+      timestamp: Date.now(),
+      isTemp: true
+    };
+    setMessages(prev => [...prev, tempMessage]);
+  };
+
+  const replaceTempMessage = (tempId, serverMessage) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === tempId ? { ...serverMessage, isTemp: false } : msg
+    ));
+  };
 
   useEffect(() => {
     if (!user?.email || user.role !== 'CUSTOMER') {
@@ -25,22 +49,38 @@ const HelpSupport = () => {
       setConnectionError('Please log in as a customer to access the support chat.');
       return;
     }
-    console.log('Setting up chat for customer:', user.email);
 
-    const fetchMessages = async () => {
+    const fetchCustomerAndMessages = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/chat/${encodeURIComponent(user.email)}`);
-        if (!response.ok) throw new Error('Failed to fetch messages');
-        const data = await response.json();
-        setMessages(data || []);
+    
+        const idResponse = await fetch(
+          `http://localhost:8080/CustomerIdByEmail?email=${encodeURIComponent(user.email)}`
+        );
+        
+        if (!idResponse.ok) throw new Error('Failed to fetch customer ID');
+        
+        const customerId = await idResponse.json();
+        setCustomerId(customerId);
+
+      
+        const messagesResponse = await fetch(
+          `http://localhost:8080/chat/${customerId}`
+        );
+        
+        if (!messagesResponse.ok) throw new Error('Failed to fetch messages');
+        
+        const messagesData = await messagesResponse.json();
+        setMessages(messagesData || []);
+
       } catch (error) {
-        console.error('Error fetching messages:', error);
-        setConnectionError('Failed to load chat history');
+        console.error('Error:', error);
+        setConnectionError('Failed to load chat data');
       }
     };
 
-    fetchMessages();
+    fetchCustomerAndMessages();
 
+    // WebSocket setup
     const client = new Client({
       brokerURL: 'ws://localhost:8080/ws',
       debug: (str) => console.log('STOMP:', str),
@@ -52,44 +92,53 @@ const HelpSupport = () => {
 
         client.subscribe('/topic/messages', (message) => {
           const receivedData = JSON.parse(message.body);
-          
+          const headers = message.headers;
+        
+      
           if (typeof receivedData === 'number') {
-            // Handle deletion
             const deletedId = receivedData;
             setMessages(prev => prev.filter(msg => msg.id !== deletedId));
             return;
           }
-          
+        
           if (receivedData.id && receivedData.customerId) {
             const receivedMsg = receivedData;
-            if (receivedMsg.customerId === user.email) {
-              setMessages(prev => {
-                const existingIndex = prev.findIndex(m => m.id === receivedMsg.id);
-                if (existingIndex !== -1) {
-                  return prev.map(m => m.id === receivedMsg.id ? receivedMsg : m);
-                } else {
-                  return [...prev, receivedMsg];
-                }
-              });
+            const tempId = headers['temp-id'];
+        
+           
+            if (tempId) {
+              replaceTempMessage(tempId, receivedMsg);
+            } else {
+             
+              if (receivedMsg.customerId === customerIdRef.current) {
+                setMessages(prev => {
+                  const existingIndex = prev.findIndex(m => m.id === receivedMsg.id);
+                  if (existingIndex !== -1) {
+                    return prev.map(m => 
+                      m.id === receivedMsg.id ? receivedMsg : m
+                    );
+                  } else {
+                    return [...prev, receivedMsg];
+                  }
+                });
+              }
             }
           }
         });
       },
-      onStompError: function (frame) {
+      onStompError: (frame) => {
         console.error('STOMP error:', frame);
         setIsConnected(false);
         setIsConnecting(false);
-        setConnectionError(
-          'Connection error: ' + (frame.headers?.message || 'Unknown error')
-        );
+        setConnectionError('Connection error: ' + (frame.headers?.message || 'Unknown error'));
       },
-      onWebSocketError: function (event) {
+      onWebSocketError: (event) => {
         console.error('WebSocket error:', event);
         setIsConnected(false);
         setIsConnecting(false);
         setConnectionError('WebSocket error: Failed to connect to server');
       },
-      onDisconnect: function () {
+      onDisconnect: () => {
         console.log('STOMP Disconnected');
         setIsConnected(false);
         setIsConnecting(false);
@@ -101,70 +150,73 @@ const HelpSupport = () => {
     setStompClient(client);
 
     return () => client.deactivate();
-  }, [user]);
+  }, [user, customerId]);
 
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const sendMessage = () => {
+    if (!isConnected || !inputMessage.trim() || !customerId) return;
+
+    const tempId = uuidv4();
+    addTempMessage(inputMessage.trim());
+
+    const messageDTO = {
+      customerId: customerId,
+      content: inputMessage.trim(),
+      senderType: 'CUSTOMER'
+    };
+
+    stompClient.publish({
+      destination: '/app/chat',
+      body: JSON.stringify(messageDTO),
+      headers: { 'temp-id': tempId }
+    });
+
+    setInputMessage('');
+  };
 
   const startEditing = (messageId, content) => {
     setEditingMessageId(messageId);
     setEditingContent(content);
   };
 
-  const sendMessage = () => {
-    if (!isConnected || !inputMessage.trim() || !user?.email) return;
+  const handleEditMessage = () => {
+    if (!editingContent.trim()) return;
+
+    const originalMessage = messages.find(msg => msg.id === editingMessageId);
+    if (!originalMessage) return;
 
     const messageDTO = {
-      customerId: user.email,
-      content: inputMessage.trim(),
-      user: 'CUSTOMER'
+      id: editingMessageId,
+      customerId: customerId,
+      content: editingContent.trim(),
+      senderType: 'CUSTOMER',
+      timestamp: originalMessage.timestamp
     };
 
     stompClient.publish({
-      destination: '/app/chat',
+      destination: '/app/chat/update',
       body: JSON.stringify(messageDTO)
     });
 
-    setInputMessage('');
-  };
+    setMessages(prev => prev.map(msg => 
+      msg.id === editingMessageId ? { ...msg, content: editingContent.trim() } : msg
+    ));
 
-  const handleEditMessage = async () => {
-    if (!editingContent.trim()) return;
-
-    try {
-      const messageDTO = {
-        id: editingMessageId,
-        customerId: user.email,
-        content: editingContent.trim(),
-        user: 'CUSTOMER'
-      };
-
-      stompClient.publish({
-        destination: '/app/chat/update',
-        body: JSON.stringify(messageDTO)
-      });
-
-      setEditingMessageId(null);
-      setEditingContent('');
-    } catch (error) {
-      console.error('Error updating message:', error);
-      setConnectionError('Failed to update message');
-    }
+    setEditingMessageId(null);
+    setEditingContent('');
   };
 
   const handleDeleteMessage = (messageId) => {
     if (!window.confirm('Are you sure you want to delete this message?')) return;
 
-    // Send delete command via WebSocket
     stompClient.publish({
       destination: '/app/message/delete',
       body: JSON.stringify(messageId)
     });
 
-    // Optimistic UI update
     setMessages(prev => prev.filter(msg => msg.id !== messageId));
   };
 
@@ -175,42 +227,23 @@ const HelpSupport = () => {
         setIsConnecting(false);
         setConnectionError('');
       } else {
-        setIsConnected(false);
-        setIsConnecting(true);
-        setConnectionError('Reconnecting...');
         stompClient.activate();
       }
     }
   };
 
-  useEffect(() => {
-    console.log('Connection state updated:', {
-      isConnected,
-      isConnecting,
-      connectionError
-    });
-  }, [isConnected, isConnecting, connectionError]);
-
   const renderMessage = (msg) => {
-    const isCustomerMessage = msg.user?.toUpperCase() === 'CUSTOMER';
-    const isAdminMessage = !isCustomerMessage;
+    const isCustomerMessage = msg.senderType === 'CUSTOMER';
 
     return (
-      <div
-        key={msg.id || Math.random()}
-        className={`flex ${isCustomerMessage ? 'justify-start' : 'justify-end'}`}
-      >
-        <div
-          className={`max-w-[80%] rounded-lg p-3 relative group ${
-            isCustomerMessage
-              ? isDark
-                ? 'bg-gray-800 text-gray-200'
-                : 'bg-gray-100 text-gray-800'
-              : 'bg-blue-500 text-white'
-          }`}
-        >
+      <div key={msg.id} className={`flex ${isCustomerMessage ? 'justify-start' : 'justify-end'}`}>
+        <div className={`max-w-[80%] rounded-lg p-3 relative group ${
+          isCustomerMessage
+            ? isDark ? 'bg-gray-800 text-gray-200' : 'bg-gray-100 text-gray-800'
+            : 'bg-blue-500 text-white'
+        }`}>
           <div className="text-sm font-medium mb-1">
-            {isCustomerMessage ? 'Customer' : 'Admin'}
+            {isCustomerMessage ? 'You' : 'Admin'}
           </div>
 
           {editingMessageId === msg.id ? (
@@ -224,7 +257,7 @@ const HelpSupport = () => {
               />
               <div className="flex gap-2">
                 <button
-                  onClick={() => handleEditMessage(msg.id)}
+                  onClick={handleEditMessage}
                   className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600"
                 >
                   Save
@@ -250,37 +283,13 @@ const HelpSupport = () => {
                     onClick={() => startEditing(msg.id, msg.content)}
                     className="p-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                      />
-                    </svg>
+                    Edit
                   </button>
                   <button
                     onClick={() => handleDeleteMessage(msg.id)}
                     className="p-1 rounded bg-red-600 hover:bg-red-700 text-white"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
+                    Delete
                   </button>
                 </div>
               )}
@@ -292,17 +301,9 @@ const HelpSupport = () => {
   };
 
   return (
-    <div
-      className={`flex flex-col h-screen ${
-        isDark ? 'bg-gray-900 text-gray-200' : 'bg-white text-gray-900'
-      }`}
-    >
+    <div className={`flex flex-col h-screen ${isDark ? 'bg-gray-900 text-gray-200' : 'bg-white text-gray-900'}`}>
       {/* Header */}
-      <div
-        className={`border-b ${
-          isDark ? 'border-gray-700' : 'border-gray-300'
-        }`}
-      >
+      <div className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-4">
             <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
@@ -311,159 +312,88 @@ const HelpSupport = () => {
             <div>
               <h2 className="text-lg font-semibold">Admin Support</h2>
               {user?.email && (
-                <p
-                  className={`text-sm ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
-                >
-                  Customer ID: {user.email}
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {customerId ? `Customer ID: ${customerId}` : `Email: ${user.email}`}
                 </p>
               )}
               <div className="flex items-center gap-2 mt-1">
-                <div
-                  className={`w-3 h-3 rounded-full ${isConnecting
-                    ? 'bg-yellow-500 animate-pulse'
-                    : isConnected
-                      ? 'bg-green-500'
-                      : 'bg-red-500'
-                    }`}
-                />
-                <span
-                  className={`text-sm font-medium ${
-                    isConnecting
-                      ? isDark
-                        ? 'text-yellow-400'
-                        : 'text-yellow-600'
-                      : isConnected
-                      ? isDark
-                        ? 'text-green-400'
-                        : 'text-green-600'
-                      : isDark
-                      ? 'text-red-400'
-                      : 'text-red-600'
-                  }`}
-                >
-                  {isConnecting
-                    ? 'Connecting to server...'
-                    : isConnected
-                      ? `Connected - ${user?.email || 'Unknown'}`
-                      : 'Disconnected - Offline'}
+                <div className={`w-3 h-3 rounded-full ${
+                  isConnecting ? 'bg-yellow-500 animate-pulse' :
+                  isConnected ? 'bg-green-500' : 'bg-red-500'
+                }`} />
+                <span className={`text-sm font-medium ${
+                  isConnecting ? (isDark ? 'text-yellow-400' : 'text-yellow-600') :
+                  isConnected ? (isDark ? 'text-green-400' : 'text-green-600') :
+                  (isDark ? 'text-red-400' : 'text-red-600')
+                }`}>
+                  {isConnecting ? 'Connecting...' :
+                   isConnected ? 'Connected' : 'Disconnected'}
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <button
-              onClick={checkConnection}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                isConnecting
-                  ? isDark
-                    ? 'bg-yellow-200 text-yellow-800'
-                    : 'bg-yellow-100 text-yellow-800'
-                  : isConnected
-                  ? isDark
-                    ? 'bg-green-200 text-green-800'
-                    : 'bg-green-100 text-green-800'
-                  : isDark
-                  ? 'bg-red-200 text-red-800'
-                  : 'bg-red-100 text-red-800'
-              }`}
-            >
-              {isConnecting
-                ? 'Connecting...'
-                : isConnected
-                  ? 'Connection Healthy'
-                  : 'Reconnect Now'}
-            </button>
-          </div>
-        </div>
-        {connectionError && (
-          <div
-            className={`px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 ${
-              isDark
-                ? 'bg-red-900 text-red-100'
-                : 'bg-red-100 text-red-800'
+          <button
+            onClick={checkConnection}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              isConnecting ? (isDark ? 'bg-yellow-200 text-yellow-800' : 'bg-yellow-100 text-yellow-800') :
+              isConnected ? (isDark ? 'bg-green-200 text-green-800' : 'bg-green-100 text-green-800') :
+              (isDark ? 'bg-red-200 text-red-800' : 'bg-red-100 text-red-800')
             }`}
           >
-            <svg
-              className="w-4 h-4 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
+            {isConnecting ? 'Connecting' : isConnected ? 'Connected' : 'Reconnect'}
+          </button>
+        </div>
+        {connectionError && (
+          <div className={`px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 ${
+            isDark ? 'bg-red-900 text-red-100' : 'bg-red-100 text-red-800'
+          }`}>
             <span>{connectionError}</span>
           </div>
         )}
       </div>
 
-      {/* Messages */}
+      
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
-          <div
-            className={`flex flex-col items-center justify-center h-full ${
-              isDark ? 'text-gray-400' : 'text-gray-500'
-            }`}
-          >
+          <div className={`flex flex-col items-center justify-center h-full ${
+            isDark ? 'text-gray-400' : 'text-gray-500'
+          }`}>
             <h3 className="text-lg font-medium">No messages yet</h3>
             <p className="text-sm">Start a conversation with the admin</p>
-            {user?.email && (
-              <p className="text-sm mt-2">Logged in as: {user.email}</p>
-            )}
           </div>
         ) : (
-          messages.map((msg) => renderMessage(msg))
+          messages.map(renderMessage)
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div
-        className={`p-4 border-t ${
-          isDark ? 'border-gray-700' : 'border-gray-300'
-        }`}
-      >
+
+      <div className={`p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
         <div className="flex gap-2">
           <textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder={
-              isConnected
-                ? `Press SHIFT+Enter for a new line. Enter sends the message.`
-                : 'Waiting for connection...'
-            }
+            placeholder={isConnected ? "Type your message..." : "Waiting for connection..."}
             disabled={!isConnected}
-            className={`flex-1 px-4 py-2 rounded-lg border resize-none min-h-[44px] max-h-32 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed ${
-              isDark
-                ? 'bg-gray-800 text-white border-gray-600'
-                : 'bg-white border-gray-300 text-black'
+            className={`flex-1 px-4 py-2 rounded-lg border resize-none min-h-[44px] max-h-32 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${
+              isDark ? 'bg-gray-800 text-white border-gray-600' : 'bg-white border-gray-300 text-black'
             }`}
             onKeyDown={(e) => {
-              // ENTER sends if SHIFT not pressed, SHIFT+ENTER adds a newline
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
               }
             }}
             rows={1}
-            style={{ overflow: 'hidden', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}
-            onInput={(e) => {
-              // Auto-resize textarea based on content
-              e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
-            }}
           />
           <button
             onClick={sendMessage}
-            disabled={!isConnected}
-            className={`px-6 py-2 rounded-full font-medium transition-colors ${isConnected
-              ? 'bg-blue-500 hover:bg-blue-600 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+            disabled={!isConnected || !inputMessage.trim()}
+            className={`px-6 py-2 rounded-full font-medium ${
+              isConnected && inputMessage.trim()
+                ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
           >
             Send
           </button>

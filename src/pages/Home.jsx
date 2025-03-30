@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 import RadarChartItemTop5 from '../components/radarChartItemTop5';
 import './home.css';
 
@@ -24,30 +25,51 @@ const StatsCard = ({ title, value, icon, bgColor, trend }) => {
 };
 
 export default function Home() {
+  const { user } = useAuth();
   const [statusMessage, setStatusMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+      setStatusMessage("Please log in to view business insights");
+      setIsLoading(false);
+      return;
+    }
+
     const fetchStatus = () => {
-      fetch('/api/business/status')
+      setIsLoading(true);
+
+      fetch(`/api/business/CustomerIdByEmail?email=${encodeURIComponent(user.email)}`)
         .then(response => {
-          if (!response.ok) throw new Error('Network response was not ok');
+          if (!response.ok) throw new Error('Customer ID lookup failed');
+          return response.json();
+        })
+        .then(customerId => {
+          return fetch(`/api/business/status/${customerId}`);
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.text().then(text => {
+              throw new Error(text || 'Business status request failed');
+            });
+          }
           return response.text();
         })
         .then(data => {
           setStatusMessage(data);
           setIsLoading(false);
         })
-        .catch(() => {
-          setStatusMessage("Business insights unavailable at this time");
+        .catch(error => {
+          console.error('Fetch error:', error);
+          setStatusMessage(error.message || "Business insights unavailable");
           setIsLoading(false);
         });
     };
 
     fetchStatus();
-    const interval = setInterval(fetchStatus, 3000000); 
+    const interval = setInterval(fetchStatus, 300000); 
     return () => clearInterval(interval);
-  }, []);
+  }, [user]); 
 
   return (
     <div className="p-6 min-h-screen bg-base-100">
@@ -56,7 +78,6 @@ export default function Home() {
         <div className="badge badge-accent badge-lg">Live Updates</div>
       </div>
 
-      {/* Enhanced Business Insights Section */}
       <div className={`mb-6 p-4 rounded-xl transition-all duration-500 ${
         isLoading ? 'bg-gradient-to-r from-info/20 to-primary/20 animate-pulse' : 
         statusMessage?.includes('unavailable') ? 'bg-error/20 border-l-4 border-error' : 
