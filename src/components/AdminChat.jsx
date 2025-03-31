@@ -45,29 +45,18 @@ const AdminChat = () => {
         client.subscribe('/topic/messages', (message) => {
           const receivedData = JSON.parse(message.body);
           
-          // Handle deletion by ID (number)
-          if (typeof receivedData === 'number') {
-            const deletedMessageId = receivedData;
-            setMessages(prev => prev.filter(msg => msg.id !== deletedMessageId));
-            return;
-          }
-          
-          // Handle message updates/additions
-          const newMsg = receivedData;
-          if (newMsg.customerId === selectedCustomer) {
-            setMessages(prev => {
-              const existingIndex = prev.findIndex(m => m.id === newMsg.id);
-              if (existingIndex !== -1) {
-                // Update existing message
-                const updatedMessages = [...prev];
-                updatedMessages[existingIndex] = newMsg;
-                return updatedMessages;
-              } else {
-                // Add new message
-                return [...prev, newMsg];
-              }
-            });
-          }
+          setMessages(prev => {
+            
+            const existingIndex = prev.findIndex(m => m.id === receivedData.id);
+            if (existingIndex !== -1) {
+              
+              const updatedMessages = [...prev];
+              updatedMessages[existingIndex] = receivedData;
+              return updatedMessages;
+            }
+           
+            return [...prev, receivedData];
+          });
         });
       },
    
@@ -99,36 +88,36 @@ const AdminChat = () => {
     };
   }, [user, selectedCustomer]);
 
-  // 3) Enhanced chat history fetch with subscription management
+ 
   const fetchChatHistory = (customerId) => {
-    setSelectedCustomer(customerId);
-    
+    setSelectedCustomer(Number(customerId)); 
     fetch(`http://localhost:8080/chat/${customerId}`)
       .then((res) => res.json())
       .then((data) => setMessages(data || []))
       .catch((err) => console.error('Error fetching chat history:', err));
   };
-  // 4) Enhanced message sending with status checks
+
+ 
   const sendMessage = (e) => {
-    if (e) e.preventDefault(); // We'll trigger it manually on Enter press
+    if (e) e.preventDefault();
     if (!newMessage.trim() || !selectedCustomer || !stompClient?.connected) return;
-
+  
     const messageData = {
-      customerId: selectedCustomer,
+      customerId: Number(selectedCustomer),
       content: newMessage.trim(),
-      user: 'ADMIN'
+      sender: 'ADMIN'
     };
-
+  
     stompClient.publish({
       destination: '/app/chat',
       body: JSON.stringify(messageData)
     });
-
+  
     setNewMessage('');
   };
 
   const handleKeyDown = (e) => {
-    // SHIFT+Enter -> new line; Enter alone -> send message
+    
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -156,23 +145,17 @@ const AdminChat = () => {
   }, [messages]);
 
   const renderMessage = (message) => {
-    const isAdminMessage = message.user?.toUpperCase() === 'ADMIN';
-    const isCustomerMessage = !isAdminMessage;
+    const isAdminMessage = message.sender === 'ADMIN';
     
     return (
-      <div
-        key={message.id}
-        className={`flex ${isCustomerMessage ? 'justify-start' : 'justify-end'}`}
-      >
-        <div
-          className={`max-w-[70%] rounded-lg p-3 relative ${
-            isCustomerMessage
-              ? 'bg-white text-gray-800 shadow-sm'
-              : 'bg-blue-500 text-white'
-          }`}
-        >
+      <div key={message.id} className={`flex ${isAdminMessage ? 'justify-end' : 'justify-start'}`}>
+        <div className={`max-w-[70%] rounded-lg p-3 relative ${
+          isAdminMessage 
+            ? 'bg-blue-500 text-white' 
+            : 'bg-white text-gray-800 shadow-sm'
+        }`}>
           <div className="text-sm font-medium mb-1">
-            {isCustomerMessage ? 'Customer' : 'Admin'}
+            {isAdminMessage ? 'Admin' : 'Customer'}
           </div>
           <p className="break-words whitespace-pre-wrap">{message.content}</p>
           <button
@@ -192,11 +175,11 @@ const AdminChat = () => {
 
   return (
     <div className="flex h-full bg-gray-50">
-      {/* Customer List Sidebar */}
+     
       <div className="w-80 bg-white border-r shadow-sm flex flex-col">
       <div className="p-4 border-b bg-white flex items-center justify-between sticky top-0 z-10">
           <h2 className="text-lg font-semibold text-gray-800">Customers</h2>
-          {/* Added Connection Status */}
+         
           <div className="flex items-center gap-2">
             <div
               className={`w-3 h-3 rounded-full ${
@@ -241,7 +224,7 @@ const AdminChat = () => {
         </div>
       </div>
 
-      {/* Enhanced Chat Area */}
+     
       <div className="flex-1 flex flex-col bg-white">
         {selectedCustomer ? (
           <>
@@ -267,7 +250,7 @@ const AdminChat = () => {
                   style={{ overflow: 'hidden', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}
                   rows={1}
                   onInput={(e) => {
-                    // Auto-resize textarea based on content
+                    
                     e.target.style.height = 'auto';
                     e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
                   }}

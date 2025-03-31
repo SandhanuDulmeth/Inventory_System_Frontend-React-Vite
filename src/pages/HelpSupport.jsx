@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Client } from '@stomp/stompjs';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { v4 as uuidv4 } from 'uuid';
 
 const HelpSupport = () => {
   const [messages, setMessages] = useState([]);
@@ -18,60 +17,33 @@ const HelpSupport = () => {
   const isDark = theme === 'dark';
   const messagesEndRef = useRef(null);
   const [customerId, setCustomerId] = useState(null);
-
   const customerIdRef = useRef();
   customerIdRef.current = customerId;
 
-
-  const addTempMessage = (content) => {
-    const tempMessage = {
-      id: uuidv4(),
-      customerId,
-      content,
-      senderType: 'CUSTOMER',
-      timestamp: Date.now(),
-      isTemp: true
-    };
-    setMessages(prev => [...prev, tempMessage]);
-  };
-
-  const replaceTempMessage = (tempId, serverMessage) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === tempId ? { ...serverMessage, isTemp: false } : msg
-    ));
-  };
-
   useEffect(() => {
     if (!user?.email || user.role !== 'CUSTOMER') {
-      console.log('Invalid user data or not a customer, skipping connection setup');
+      console.log('Invalid user data, skipping connection setup');
       setIsConnecting(false);
       setIsConnected(false);
-      setConnectionError('Please log in as a customer to access the support chat.');
+      setConnectionError('Please log in as a customer to access support chat.');
       return;
     }
 
     const fetchCustomerAndMessages = async () => {
       try {
-    
         const idResponse = await fetch(
           `http://localhost:8080/CustomerIdByEmail?email=${encodeURIComponent(user.email)}`
         );
-        
         if (!idResponse.ok) throw new Error('Failed to fetch customer ID');
-        
         const customerId = await idResponse.json();
         setCustomerId(customerId);
 
-      
         const messagesResponse = await fetch(
           `http://localhost:8080/chat/${customerId}`
         );
-        
         if (!messagesResponse.ok) throw new Error('Failed to fetch messages');
-        
         const messagesData = await messagesResponse.json();
         setMessages(messagesData || []);
-
       } catch (error) {
         console.error('Error:', error);
         setConnectionError('Failed to load chat data');
@@ -80,7 +52,6 @@ const HelpSupport = () => {
 
     fetchCustomerAndMessages();
 
-    // WebSocket setup
     const client = new Client({
       brokerURL: 'ws://localhost:8080/ws',
       debug: (str) => console.log('STOMP:', str),
@@ -92,37 +63,26 @@ const HelpSupport = () => {
 
         client.subscribe('/topic/messages', (message) => {
           const receivedData = JSON.parse(message.body);
-          const headers = message.headers;
-        
-      
+          
           if (typeof receivedData === 'number') {
-            const deletedId = receivedData;
-            setMessages(prev => prev.filter(msg => msg.id !== deletedId));
+            setMessages(prev => prev.filter(msg => msg.id !== receivedData));
             return;
           }
-        
           if (receivedData.id && receivedData.customerId) {
-            const receivedMsg = receivedData;
-            const tempId = headers['temp-id'];
-        
-           
-            if (tempId) {
-              replaceTempMessage(tempId, receivedMsg);
-            } else {
-             
-              if (receivedMsg.customerId === customerIdRef.current) {
-                setMessages(prev => {
-                  const existingIndex = prev.findIndex(m => m.id === receivedMsg.id);
-                  if (existingIndex !== -1) {
-                    return prev.map(m => 
-                      m.id === receivedMsg.id ? receivedMsg : m
-                    );
-                  } else {
-                    return [...prev, receivedMsg];
-                  }
-                });
+            setMessages(prev => {
+              
+              const existingIndex = prev.findIndex(m => 
+                (m.id === receivedData.id) || 
+                (m.isOptimistic && m.content === receivedData.content)
+              );
+              
+              if (existingIndex !== -1) {
+                return prev.map(m => 
+                  (m.id === receivedData.id || m.isOptimistic) ? receivedData : m
+                );
               }
-            }
+              return [...prev, receivedData];
+            });
           }
         });
       },
@@ -136,10 +96,9 @@ const HelpSupport = () => {
         console.error('WebSocket error:', event);
         setIsConnected(false);
         setIsConnecting(false);
-        setConnectionError('WebSocket error: Failed to connect to server');
+        setConnectionError('WebSocket connection failed');
       },
       onDisconnect: () => {
-        console.log('STOMP Disconnected');
         setIsConnected(false);
         setIsConnecting(false);
         setConnectionError('Disconnected from server');
@@ -159,8 +118,19 @@ const HelpSupport = () => {
   const sendMessage = () => {
     if (!isConnected || !inputMessage.trim() || !customerId) return;
 
-    const tempId = uuidv4();
-    addTempMessage(inputMessage.trim());
+    const tempId = Date.now(); 
+    const optimisticMessage = {
+      id: tempId,
+      customerId: customerId,
+      content: inputMessage.trim(),
+      senderType: 'CUSTOMER',
+      timestamp: new Date().getTime(),
+      isOptimistic: true
+    };
+
+        
+        setMessages(prev => [...prev, optimisticMessage]);
+        setInputMessage('');
 
     const messageDTO = {
       customerId: customerId,
@@ -170,8 +140,7 @@ const HelpSupport = () => {
 
     stompClient.publish({
       destination: '/app/chat',
-      body: JSON.stringify(messageDTO),
-      headers: { 'temp-id': tempId }
+      body: JSON.stringify(messageDTO)
     });
 
     setInputMessage('');
@@ -188,9 +157,9 @@ const HelpSupport = () => {
     const originalMessage = messages.find(msg => msg.id === editingMessageId);
     if (!originalMessage) return;
 
-    const messageDTO = {
+   const messageDTO = {
       id: editingMessageId,
-      customerId: customerId,
+      customerId: originalMessage.customerId,
       content: editingContent.trim(),
       senderType: 'CUSTOMER',
       timestamp: originalMessage.timestamp
@@ -201,34 +170,21 @@ const HelpSupport = () => {
       body: JSON.stringify(messageDTO)
     });
 
-    setMessages(prev => prev.map(msg => 
-      msg.id === editingMessageId ? { ...msg, content: editingContent.trim() } : msg
-    ));
-
     setEditingMessageId(null);
     setEditingContent('');
   };
 
   const handleDeleteMessage = (messageId) => {
-    if (!window.confirm('Are you sure you want to delete this message?')) return;
-
+    if (!window.confirm('Delete this message permanently?')) return;
     stompClient.publish({
       destination: '/app/message/delete',
       body: JSON.stringify(messageId)
     });
-
-    setMessages(prev => prev.filter(msg => msg.id !== messageId));
   };
 
   const checkConnection = () => {
-    if (stompClient) {
-      if (stompClient.connected) {
-        setIsConnected(true);
-        setIsConnecting(false);
-        setConnectionError('');
-      } else {
-        stompClient.activate();
-      }
+    if (stompClient && !stompClient.connected) {
+      stompClient.activate();
     }
   };
 
@@ -302,7 +258,6 @@ const HelpSupport = () => {
 
   return (
     <div className={`flex flex-col h-screen ${isDark ? 'bg-gray-900 text-gray-200' : 'bg-white text-gray-900'}`}>
-      {/* Header */}
       <div className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center space-x-4">
@@ -352,7 +307,6 @@ const HelpSupport = () => {
         )}
       </div>
 
-      
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
           <div className={`flex flex-col items-center justify-center h-full ${
@@ -367,13 +321,12 @@ const HelpSupport = () => {
         <div ref={messagesEndRef} />
       </div>
 
-
       <div className={`p-4 border-t ${isDark ? 'border-gray-700' : 'border-gray-300'}`}>
         <div className="flex gap-2">
           <textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            placeholder={isConnected ? "Type your message..." : "Waiting for connection..."}
+            placeholder={isConnected ? "Type your message..." : "Connecting..."}
             disabled={!isConnected}
             className={`flex-1 px-4 py-2 rounded-lg border resize-none min-h-[44px] max-h-32 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 ${
               isDark ? 'bg-gray-800 text-white border-gray-600' : 'bg-white border-gray-300 text-black'
