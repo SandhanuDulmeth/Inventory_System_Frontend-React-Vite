@@ -9,10 +9,17 @@ const InventoryManagementShowItems = () => {
   const [error, setError] = useState(null);
 
 
+  const categories = {
+    1: 'Electronics',
+    2: 'Office Supplies',
+    3: 'Furniture',
+    4: 'Appliances',
+  };
+
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const response = await fetch('https://api.example.com/items');
+        const response = await fetch('http://localhost:8080/ProductController/get-Items');
         if (!response.ok) throw new Error('Failed to fetch');
         const data = await response.json();
         setItems(data);
@@ -53,7 +60,11 @@ const InventoryManagementShowItems = () => {
           <h1 className={`text-2xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
             Inventory Items
           </h1>
-          <span className={`px-3 py-1 rounded-full ${isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`}>
+          <span
+            className={`px-3 py-1 rounded-full ${
+              isDark ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+            }`}
+          >
             Total: {items.length}
           </span>
         </div>
@@ -95,7 +106,7 @@ const InventoryManagementShowItems = () => {
                   <td className="px-6 py-4">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        item.stock_quantity > 10
+                        item.quantity > 10
                           ? isDark
                             ? 'bg-green-800/30 text-green-400'
                             : 'bg-green-100 text-green-800'
@@ -104,11 +115,11 @@ const InventoryManagementShowItems = () => {
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {item.stock_quantity} in stock
+                      {item.quantity} in stock
                     </span>
                   </td>
                   <td className={`px-6 py-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                    {item.category}
+                    {categories[item.categoryId] || 'Unknown'}
                   </td>
                 </tr>
               ))}
@@ -116,7 +127,7 @@ const InventoryManagementShowItems = () => {
           </table>
         </div>
 
-        {items.length === 0 && !loading && (
+        {items.length === 0 && (
           <div className={`text-center py-8 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
             No items found in inventory
           </div>

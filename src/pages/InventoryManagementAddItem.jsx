@@ -17,20 +17,40 @@ const InventoryManagementAddItem = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-   
-    console.log('Form submitted:', formData);
-    setIsModalOpen(false);
-  
-    setFormData({
-      name: '',
-      description: '',
-      price: '',
-      stock_quantity: '',
-      category_id: ''
-    });
-  };
+    try {
+        const response = await fetch('http://localhost:8080/ProductController/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: formData.name,
+                description: formData.description,
+                price: parseFloat(formData.price),
+                quantity: parseInt(formData.stock_quantity),
+                categoryId: parseInt(formData.category_id)
+            }),
+        });
+
+        if (!response.ok) throw new Error('Failed to create product');
+        
+       
+        setFormData({
+            name: '',
+            description: '',
+            price: '',
+            stock_quantity: '',
+            category_id: ''
+        });
+        setIsModalOpen(false);
+       
+    } catch (error) {
+        console.error('Error creating product:', error);
+       
+    }
+};
 
   return (
     <div className="p-6">
@@ -158,8 +178,9 @@ const InventoryManagementAddItem = () => {
                     >
                       <option value="">Select Category</option>
                       <option value="1">Electronics</option>
-                      <option value="2">Accessories</option>
+                      <option value="2">Office Supplies</option>
                       <option value="3">Furniture</option>
+                      <option value="4">Appliances</option>
                     </select>
                   </div>
 
