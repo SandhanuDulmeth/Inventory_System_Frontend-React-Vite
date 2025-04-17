@@ -28,6 +28,43 @@ export default function Home() {
   const { user } = useAuth();
   const [statusMessage, setStatusMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [customerId, setCustomerId] = useState(null);
+
+  const fetchAndPersistStatus = (customerId, forceRefresh = false) => {
+    const storageKey = `status_${customerId}`;
+    const storedData = localStorage.getItem(storageKey);
+    const now = Date.now();
+    const fiveHours = 5 * 60 * 60 * 1000;
+
+    if (!forceRefresh && storedData) {
+      const { message, timestamp } = JSON.parse(storedData);
+      if (now - timestamp < fiveHours) {
+        setStatusMessage(message);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    setIsLoading(true);
+    fetch(`/api/business/status/${customerId}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Status request failed');
+        return response.text();
+      })
+      .then(data => {
+        setStatusMessage(data);
+        localStorage.setItem(storageKey, JSON.stringify({
+          message: data,
+          timestamp: now
+        }));
+        setIsLoading(false);
+      })
+      .catch(error => {
+        console.error('Fetch error:', error);
+        setStatusMessage(error.message || "Business insights unavailable");
+        setIsLoading(false);
+      });
+  };
 
   useEffect(() => {
     if (!user) {
@@ -36,40 +73,34 @@ export default function Home() {
       return;
     }
 
-    const fetchStatus = () => {
-      setIsLoading(true);
+     let intervalId;
 
-      fetch(`/api/business/CustomerIdByEmail?email=${encodeURIComponent(user.email)}`)
-        .then(response => {
-          if (!response.ok) throw new Error('Customer ID lookup failed');
-          return response.json();
-        })
-        .then(customerId => {
-          return fetch(`/api/business/status/${customerId}`);
-        })
-        .then(response => {
-          if (!response.ok) {
-            return response.text().then(text => {
-              throw new Error(text || 'Business status request failed');
-            });
-          }
-          return response.text();
-        })
-        .then(data => {
-          setStatusMessage(data);
-          setIsLoading(false);
-        })
-        .catch(error => {
-          console.error('Fetch error:', error);
-          setStatusMessage(error.message || "Business insights unavailable");
-          setIsLoading(false);
-        });
-    };
+    fetch(`/api/business/CustomerIdByEmail?email=${encodeURIComponent(user.email)}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Customer ID lookup failed');
+        return response.json();
+      })
+      .then(customerId => {
+        setCustomerId(customerId);
+        // Initial fetch
+        fetchAndPersistStatus(customerId);
+        // Set up interval to check every 5 minutes
+        intervalId = setInterval(() => fetchAndPersistStatus(customerId), 300000);
+      })
+      .catch(error => {
+        console.error('Customer ID fetch error:', error);
+        setStatusMessage("Business insights unavailable");
+        setIsLoading(false);
+      });
 
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 300000); 
-    return () => clearInterval(interval);
-  }, [user]); 
+    return () => clearInterval(intervalId);
+  }, [user]);
+
+  const handleManualRefresh = () => {
+    if (customerId) {
+      fetchAndPersistStatus(customerId, true);
+    }
+  };
 
   return (
     <div className="p-6 min-h-screen bg-base-100">
@@ -104,13 +135,13 @@ export default function Home() {
             )}
           </div>
           {!isLoading && !statusMessage?.includes('unavailable') && (
-            <button 
-              className="ml-auto btn btn-sm btn-ghost"
-              onClick={() => window.location.reload()}
-            >
-              Refresh Insights
-            </button>
-          )}
+        <button 
+          className="ml-auto btn btn-sm btn-ghost"
+          onClick={handleManualRefresh}
+        >
+          Refresh Insights
+        </button>
+      )}
         </div>
       </div>
 
