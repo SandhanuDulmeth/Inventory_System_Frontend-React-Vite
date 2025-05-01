@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 const InventoryManagementAddItem = () => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -12,6 +13,7 @@ const InventoryManagementAddItem = () => {
     price: '',
     stock_quantity: '',
     category_id: '',
+    category_id: '', 
   });
   const [focusedFields, setFocusedFields] = useState({
     name: false,
@@ -48,6 +50,7 @@ const InventoryManagementAddItem = () => {
           price: parseFloat(formData.price),
           quantity: parseInt(formData.stock_quantity),
           categoryId: parseInt(formData.category_id),
+          customerId: user.customerId,
         }),
       });
 
@@ -59,6 +62,7 @@ const InventoryManagementAddItem = () => {
         price: '',
         stock_quantity: '',
         category_id: '',
+        customerId: user.customerId,
       });
     } catch (error) {
       console.error('Error creating product:', error);

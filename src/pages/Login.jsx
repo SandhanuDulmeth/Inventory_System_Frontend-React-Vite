@@ -41,7 +41,7 @@ const Login = () => {
             id: credentials.email,
             role: 'ADMIN',
             email: credentials.email,
-            token: 'admin-token'
+            token: 'admin-token',
           };
           login(adminData);
           navigate('/admin');
@@ -52,7 +52,17 @@ const Login = () => {
         }
       }
 
-      // If not admin, check hardcoded customers
+      // If not admin, check customer credentials
+      const customerEmailResponse = await fetch(
+        `http://localhost:8080/api/customer/check-email?email=${credentials.email}`
+      );
+      if (!customerEmailResponse.ok) throw new Error('Failed to check customer email');
+      const isCustomerEmailValid = await customerEmailResponse.json();
+
+      if (!isCustomerEmailValid) {
+        throw new Error('Customer email not found');
+      }
+
       const customerPasswordResponse = await fetch(
         `http://localhost:8080/api/customer/check-password?email=${credentials.email}&password=${credentials.password}`
       );
@@ -60,11 +70,19 @@ const Login = () => {
       const isCustomerPasswordValid = await customerPasswordResponse.json();
 
       if (isCustomerPasswordValid) {
+        // Get customer ID from backend
+        const customerIdResponse = await fetch(
+          `http://localhost:8080/api/customer/CustomerIdByEmail?email=${credentials.email}`
+        );
+        if (!customerIdResponse.ok) throw new Error('Failed to fetch customer ID');
+        const customerId = await customerIdResponse.json();
+
         const customerData = {
-          id: credentials.email,
+          id: customerId, // Use the retrieved ID
+          customerId: customerId, // Explicitly set customerId
           role: 'CUSTOMER',
           email: credentials.email,
-          token: 'customer-token'
+          token: 'customer-token',
         };
         login(customerData);
         navigate('/customer');
