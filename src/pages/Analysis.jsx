@@ -4,6 +4,7 @@ import axios from 'axios';
 import { CountUp } from 'use-count-up';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { LogarithmicScale } from 'chart.js';
 
 const Analysis = () => {
   const { user, loading: authLoading } = useAuth();
@@ -29,6 +30,7 @@ const Analysis = () => {
 
         // Use customerId from user if available, otherwise default to 1
         const customerId = user.customerId || 1;
+ 
 
         const [itemsRes, categoriesRes, ordersRes] = await Promise.all([
           axios.get(`/api/report/items/count?customerId=${customerId}`),
@@ -44,6 +46,7 @@ const Analysis = () => {
           orders: orders.length,
           sales: orders.reduce((sum, order) => sum + order.totalAmount, 0),
         });
+
 
         setCategories(categoriesRes.data);
         setSalesData(monthlySales);

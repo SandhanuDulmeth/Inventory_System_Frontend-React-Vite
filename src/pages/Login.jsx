@@ -53,10 +53,13 @@ const Login = () => {
       }
 
       // If not admin, check hardcoded customers
-      if (
-        (credentials.email === 'customer12@gmail.com' && credentials.password === 'customer12') ||
-        (credentials.email === 'customer123@gmail.com' && credentials.password === 'customer123')
-      ) {
+      const customerPasswordResponse = await fetch(
+        `http://localhost:8080/api/customer/check-password?email=${credentials.email}&password=${credentials.password}`
+      );
+      if (!customerPasswordResponse.ok) throw new Error('Failed to check customer password');
+      const isCustomerPasswordValid = await customerPasswordResponse.json();
+
+      if (isCustomerPasswordValid) {
         const customerData = {
           id: credentials.email,
           role: 'CUSTOMER',
@@ -66,7 +69,7 @@ const Login = () => {
         login(customerData);
         navigate('/customer');
       } else {
-        throw new Error('Invalid credentials');
+        setError('Invalid customer password');
       }
     } catch (error) {
       setError(error.message);
