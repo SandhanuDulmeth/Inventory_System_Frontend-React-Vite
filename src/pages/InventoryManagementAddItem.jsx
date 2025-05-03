@@ -13,7 +13,7 @@ const InventoryManagementAddItem = () => {
     price: '',
     stock_quantity: '',
     category_id: '',
-    category_id: '', 
+    category_id: '',
   });
   const [focusedFields, setFocusedFields] = useState({
     name: false,
@@ -88,17 +88,15 @@ const InventoryManagementAddItem = () => {
               onFocus={() => handleFocus('name')}
               onBlur={() => handleBlur('name')}
               autoFocus
-              className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                }`}
               required
             />
             <label
-              className={`absolute left-4 transition-all duration-200 ${
-                formData.name || focusedFields.name
+              className={`absolute left-4 transition-all duration-200 ${formData.name || focusedFields.name
                   ? '-top-2 text-xs text-blue-500'
                   : `top-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`
-              }`}
+                }`}
             >
               Product Name *
             </label>
@@ -112,18 +110,16 @@ const InventoryManagementAddItem = () => {
               onChange={handleInputChange}
               onFocus={() => handleFocus('description')}
               onBlur={() => handleBlur('description')}
-              className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                }`}
               rows="3"
               required
             />
             <label
-              className={`absolute left-4 transition-all duration-200 ${
-                formData.description || focusedFields.description
+              className={`absolute left-4 transition-all duration-200 ${formData.description || focusedFields.description
                   ? '-top-2 text-xs text-blue-500'
                   : `top-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`
-              }`}
+                }`}
             >
               Description *
             </label>
@@ -144,18 +140,16 @@ const InventoryManagementAddItem = () => {
                   onBlur={() => handleBlur('price')}
                   step="0.01"
                   min="0"
-                  className={`w-full pl-7 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className={`w-full pl-7 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
                   required
                 />
               </div>
               <label
-                className={`absolute left-7 transition-all duration-200 ${
-                  formData.price || focusedFields.price
+                className={`absolute left-7 transition-all duration-200 ${formData.price || focusedFields.price
                     ? '-top-2 text-xs text-blue-500'
                     : `top-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`
-                }`}
+                  }`}
               >
                 Price *
               </label>
@@ -173,24 +167,21 @@ const InventoryManagementAddItem = () => {
                   onFocus={() => handleFocus('stock_quantity')}
                   onBlur={() => handleBlur('stock_quantity')}
                   min="0"
-                  className={`w-full pl-7 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-                  }`}
+                  className={`w-full pl-7 pr-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                    }`}
                   required
                 />
               </div>
               <label
-                className={`absolute left-7 transition-all duration-200 ${
-                  formData.stock_quantity || focusedFields.stock_quantity
+                className={`absolute left-7 transition-all duration-200 ${formData.stock_quantity || focusedFields.stock_quantity
                     ? '-top-2 text-xs text-blue-500'
                     : `top-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`
-                }`}
+                  }`}
               >
                 Stock Quantity *
               </label>
             </div>
           </div>
-
           {/* Category */}
           <div className="relative">
             <select
@@ -199,23 +190,21 @@ const InventoryManagementAddItem = () => {
               onChange={handleInputChange}
               onFocus={() => handleFocus('category_id')}
               onBlur={() => handleBlur('category_id')}
-              className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
-              }`}
+              className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isDark ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300 text-gray-900'
+                }`}
               required
             >
-              <option value="">Select Category</option>
+              <option value="" disabled></option>
               <option value="1">Electronics</option>
               <option value="2">Office Supplies</option>
               <option value="3">Furniture</option>
               <option value="4">Appliances</option>
             </select>
             <label
-              className={`absolute left-4 transition-all duration-200 ${
-                formData.category_id || focusedFields.category_id
-                  ? '-top-2 text-xs text-blue-500'
-                  : `top-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`
-              }`}
+              className={`absolute left-4 transition-all duration-200 ${formData.category_id || focusedFields.category_id
+                  ? '-top-3 text-xs text-blue-500 bg-transparent px-1' // Added bg-transparent and px-1
+                  : `top-3.5 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`
+                } ${isDark ? 'bg-gray-700' : 'bg-white'}`} // Add background color to prevent overlap
             >
               Category *
             </label>
@@ -226,9 +215,8 @@ const InventoryManagementAddItem = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors ${
-                isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
-              }`}
+              className={`px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors ${isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
             >
               {isSubmitting ? 'Adding...' : 'Add Product'}
             </button>
