@@ -6,9 +6,9 @@ const Reports = () => {
   const isDark = theme === 'dark';
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Reports</h1>
-      <div className={`rounded-lg shadow p-6 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+    <div className="min-h-screen p-6">
+      <div className={`rounded-xl shadow-lg p-6 h-full ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+        <h1 className="text-2xl font-bold mb-4">Reports</h1>
         <div className="grid gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className={`border rounded-lg p-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
@@ -30,4 +30,4 @@ const Reports = () => {
   );
 };
 
-export default Reports; 
+export default Reports;
