@@ -4,14 +4,13 @@ import clsx from 'clsx';
 import { FiEdit, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
 
 class Supplier {
-  constructor(id, name, contactPerson, email, phone, address, productsSupplied, status, dateAdded) {
+  constructor(id, name, contactPerson, email, phone, address, status, dateAdded) {
     this.id = id;
     this.name = name;
     this.contactPerson = contactPerson;
     this.email = email;
     this.phone = phone;
     this.address = address;
-    this.productsSupplied = productsSupplied;
     this.status = status;
     this.dateAdded = dateAdded;
   }
@@ -30,7 +29,7 @@ const SupplierTable = ({ suppliers, isDark, onEdit, onDelete }) => {
       <table className="w-full">
         <thead className={clsx(isDark ? 'bg-gray-800' : 'bg-gray-50', 'text-left')}>
           <tr>
-            {['Name', 'Contact', 'Email', 'Phone', 'Products', 'Status', 'Added Date', 'Actions'].map((header) => (
+            {['Name', 'Contact', 'Email', 'Phone', 'Address', 'Status', 'Added Date', 'Actions'].map((header) => (
               <th
                 key={header}
                 className={clsx(
@@ -43,49 +42,62 @@ const SupplierTable = ({ suppliers, isDark, onEdit, onDelete }) => {
             ))}
           </tr>
         </thead>
-        
         <tbody className="divide-y">
-          {suppliers.map((supplier) => (
-            <tr
-              key={supplier.id}
-              className={clsx(
-                isDark 
-                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
-                  : 'bg-white hover:bg-gray-50 text-gray-700',
-                'transition-colors duration-200 cursor-pointer'
-              )}
-            >
-              <td className="px-6 py-4 text-sm">{supplier.name}</td>
-              <td className="px-6 py-4 text-sm">{supplier.contactPerson}</td>
-              <td className="px-6 py-4 text-sm">{supplier.email}</td>
-              <td className="px-6 py-4 text-sm">{supplier.phone}</td>
-              <td className="px-6 py-4 text-sm">{supplier.productsSupplied?.join(', ') || ''}</td>
-              <td className="px-6 py-4 text-sm">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[supplier.status]}`}>
-                  {supplier.status}
-                </span>
-              </td>
-              <td className="px-6 py-4 text-sm">
-                {supplier.dateAdded ? new Date(supplier.dateAdded).toLocaleDateString() : ''}
-              </td>
-              <td className="px-6 py-4 text-sm">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onEdit(supplier); }}
-                    className="text-blue-500 hover:text-blue-600"
-                  >
-                    <FiEdit size={18} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(supplier); }}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    <FiTrash2 size={18} />
-                  </button>
-                </div>
+          {!Array.isArray(suppliers) || suppliers.length === 0 ? (
+            <tr>
+              <td
+                colSpan={8}
+                className={clsx(
+                  'px-6 py-8 text-center text-gray-400 text-sm',
+                  isDark ? 'bg-gray-800' : 'bg-white'
+                )}
+              >
+                No suppliers found.
               </td>
             </tr>
-          ))}
+          ) : (
+            suppliers.map((supplier) => (
+              <tr
+                key={supplier.id}
+                className={clsx(
+                  isDark 
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
+                    : 'bg-white hover:bg-gray-50 text-gray-700',
+                  'transition-colors duration-200 cursor-pointer'
+                )}
+              >
+                <td className="px-6 py-4 text-sm">{supplier.name}</td>
+                <td className="px-6 py-4 text-sm">{supplier.contactPerson}</td>
+                <td className="px-6 py-4 text-sm">{supplier.email}</td>
+                <td className="px-6 py-4 text-sm">{supplier.phone}</td>
+                <td className="px-6 py-4 text-sm">{supplier.address}</td>
+                <td className="px-6 py-4 text-sm">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[supplier.status]}`}>
+                    {supplier.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  {supplier.dateAdded ? new Date(supplier.dateAdded).toLocaleDateString() : ''}
+                </td>
+                <td className="px-6 py-4 text-sm">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEdit(supplier); }}
+                      className="text-blue-500 hover:text-blue-600"
+                    >
+                      <FiEdit size={18} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDelete(supplier); }}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      <FiTrash2 size={18} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>
@@ -99,20 +111,30 @@ const SupplierModal = ({ supplier, isOpen, onClose, isDark, onSubmit, isEditing 
     email: '',
     phone: '',
     address: '',
-    productsSupplied: [],
     status: 'Active'
   });
 
   useEffect(() => {
-    if (supplier) setFormData({ ...supplier });
+    if (supplier) {
+      setFormData({
+        name: supplier.name || '',
+        contactPerson: supplier.contactPerson || '',
+        email: supplier.email || '',
+        phone: supplier.phone || '',
+        address: supplier.address || '',
+        status: supplier.status || 'Active'
+      });
+    }
   }, [supplier]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit({
+    const submittedData = {
       ...formData,
-      productsSupplied: formData.productsSupplied.split(',').map(p => p.trim())
-    });
+      // Include id for updates
+      ...(supplier?.id && { id: supplier.id })
+    };
+    onSubmit(submittedData);
     onClose();
   };
 
@@ -127,7 +149,7 @@ const SupplierModal = ({ supplier, isOpen, onClose, isDark, onSubmit, isEditing 
         <div className="p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className={clsx('text-xl font-semibold', isDark ? 'text-gray-200' : 'text-gray-800')}>
-              {isEditing ? 'Edit Supplier' : 'Add New Supplier'}
+              {isEditing ? (supplier?.id ? 'Edit Supplier' : 'Add New Supplier') : 'Delete Supplier'}
             </h3>
             <button
               onClick={onClose}
@@ -139,109 +161,124 @@ const SupplierModal = ({ supplier, isOpen, onClose, isDark, onSubmit, isEditing 
               <FiX size={24} />
             </button>
           </div>
-
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                Supplier Name
-              </label>
-              <input
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={clsx(
-                  'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                    : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                )}
-              />
-            </div>
-
-            <div>
-              <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                Contact Person
-              </label>
-              <input
-                required
-                value={formData.contactPerson}
-                onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-                className={clsx(
-                  'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                    : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                )}
-              />
-            </div>
-
-            <div>
-              <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={clsx(
-                  'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                    : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                )}
-              />
-            </div>
-
-            <div>
-              <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                Phone
-              </label>
-              <input
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className={clsx(
-                  'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                    : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                )}
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
-                Products Supplied (comma separated)
-              </label>
-              <input
-                value={formData.productsSupplied}
-                onChange={(e) => setFormData({ ...formData, productsSupplied: e.target.value })}
-                className={clsx(
-                  'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
-                  isDark 
-                    ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
-                    : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                )}
-              />
-            </div>
-
-            <div className="md:col-span-2 flex justify-end space-x-4 mt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg border hover:bg-gray-100 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
-              >
-                {isEditing ? 'Update Supplier' : 'Create Supplier'}
-              </button>
-            </div>
-          </form>
+          {isEditing ? (
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  Supplier Name
+                </label>
+                <input
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className={clsx(
+                    'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  )}
+                />
+              </div>
+              <div>
+                <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  Contact Person
+                </label>
+                <input
+                  required
+                  value={formData.contactPerson}
+                  onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                  className={clsx(
+                    'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  )}
+                />
+              </div>
+              <div>
+                <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className={clsx(
+                    'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  )}
+                />
+              </div>
+              <div>
+                <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  Phone
+                </label>
+                <input
+                  required
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className={clsx(
+                    'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  )}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  Address
+                </label>
+                <input
+                  required
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className={clsx(
+                    'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  )}
+                />
+              </div>
+              <div>
+                <label className={clsx('block text-sm font-medium mb-1', isDark ? 'text-gray-300' : 'text-gray-700')}>
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className={clsx(
+                    'w-full rounded-lg border px-4 py-2 focus:ring-2 focus:outline-none',
+                    isDark 
+                      ? 'bg-gray-700 border-gray-600 focus:ring-blue-500 focus:border-blue-500'
+                      : 'bg-white border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  )}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div className="md:col-span-2 flex justify-end space-x-4 mt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 rounded-lg border hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                >
+                  {supplier?.id ? 'Update Supplier' : 'Create Supplier'}
+                </button>
+              </div>
+            </form>
+          ) : null}
         </div>
       </div>
     </div>
@@ -260,10 +297,12 @@ const Suppliers = () => {
   const fetchSuppliers = async () => {
     try {
       const response = await fetch(`${API_ENDPOINT}/get-suppliers`);
+      if (!response.ok) throw new Error('Failed to fetch');
       const data = await response.json();
-      setSuppliers(data);
+      setSuppliers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching suppliers:', error);
+      setSuppliers([]);
     }
   };
 
@@ -272,9 +311,11 @@ const Suppliers = () => {
       const response = await fetch(`${API_ENDPOINT}/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newSupplier)
+        body: JSON.stringify({
+          ...newSupplier,
+          dateAdded: new Date().toISOString()
+        })
       });
-      
       if (response.ok) {
         await fetchSuppliers();
       }
@@ -283,10 +324,29 @@ const Suppliers = () => {
     }
   };
 
+  const updateSupplier = async (updatedSupplier) => {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/${updatedSupplier.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedSupplier)
+      });
+      if (response.ok) {
+        await fetchSuppliers();
+      }
+    } catch (error) {
+      console.error('Error updating supplier:', error);
+    }
+  };
+
   const deleteSupplier = async (id) => {
     try {
-      // Replace with actual delete endpoint when available
-      console.log('Delete functionality not implemented yet');
+      const response = await fetch(`${API_ENDPOINT}/delete/${id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        await fetchSuppliers();
+      }
     } catch (error) {
       console.error('Error deleting supplier:', error);
     }
@@ -297,7 +357,7 @@ const Suppliers = () => {
   }, []);
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className={clsx('text-2xl font-bold', isDark ? 'text-gray-100' : 'text-gray-900')}>
@@ -306,15 +366,7 @@ const Suppliers = () => {
           <button
             onClick={() => {
               setSelectedSupplier(new Supplier(
-                null, 
-                '', 
-                '', 
-                '', 
-                '', 
-                '', 
-                [], 
-                'Active', 
-                new Date().toISOString()
+                null, '', '', '', '', '', 'Active', new Date().toISOString()
               ));
               setIsAdding(true);
             }}
@@ -347,8 +399,8 @@ const Suppliers = () => {
             setIsAdding(false);
           }}
           isDark={isDark}
-          onSubmit={isAdding ? createSupplier : () => {}}
-          isEditing={isEditing}
+          onSubmit={isEditing ? updateSupplier : createSupplier}
+          isEditing={isEditing || isAdding}
         />
 
         {/* Delete Modal */}
