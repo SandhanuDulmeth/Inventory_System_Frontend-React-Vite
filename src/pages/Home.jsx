@@ -30,7 +30,12 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [customerId, setCustomerId] = useState(null);
-  const navigate = useNavigate(); // Add this line
+  const [lowStock, setLowStock] = useState(null);
+  const [totalValue, setTotalValue] = useState(null);
+  const [categoriesCount, setCategoriesCount] = useState(null);
+  const [statsError, setStatsError] = useState(false);
+  const [totalItems, setTotalItems] = useState(null);
+  const navigate = useNavigate();
 
   const fetchAndPersistStatus = (customerId, forceRefresh = false) => {
     const storageKey = `status_${customerId}`;
@@ -68,6 +73,58 @@ export default function Home() {
       });
   };
 
+  const fetchInventoryStats = (customerId) => {
+    setStatsError(false);
+    
+    // Fetch total items count
+    fetch(`/api/report/items/count?customerId=${customerId}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Total items fetch failed');
+        return response.json();
+      })
+      .then(data => setTotalItems(data))
+      .catch(error => {
+        console.error('Total items error:', error);
+        setStatsError(true);
+      });
+
+    // Fetch low stock count
+    fetch(`/api/report/low-stock?customerId=${customerId}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Low stock fetch failed');
+        return response.json();
+      })
+      .then(data => setLowStock(data))
+      .catch(error => {
+        console.error('Low stock error:', error);
+        setStatsError(true);
+      });
+
+    // Fetch total value
+    fetch(`/api/report/total-value?customerId=${customerId}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Total value fetch failed');
+        return response.json();
+      })
+      .then(data => setTotalValue(data))
+      .catch(error => {
+        console.error('Total value error:', error);
+        setStatsError(true);
+      });
+
+    // Fetch categories count
+    fetch(`/api/report/categories/count?customerId=${customerId}`)
+      .then(response => {
+        if (!response.ok) throw new Error('Categories count fetch failed');
+        return response.json();
+      })
+      .then(data => setCategoriesCount(data))
+      .catch(error => {
+        console.error('Categories count error:', error);
+        setStatsError(true);
+      });
+  };
+
   useEffect(() => {
     if (!user) {
       setStatusMessage("Please log in to view business insights");
@@ -75,7 +132,7 @@ export default function Home() {
       return;
     }
 
-     let intervalId;
+    let intervalId;
 
     fetch(`/api/business/CustomerIdByEmail?email=${encodeURIComponent(user.email)}`)
       .then(response => {
@@ -84,9 +141,8 @@ export default function Home() {
       })
       .then(customerId => {
         setCustomerId(customerId);
-        // Initial fetch
+        fetchInventoryStats(customerId);
         fetchAndPersistStatus(customerId);
-        // Set up interval to check every 5 minutes
         intervalId = setInterval(() => fetchAndPersistStatus(customerId), 300000);
       })
       .catch(error => {
@@ -101,6 +157,7 @@ export default function Home() {
   const handleManualRefresh = () => {
     if (customerId) {
       fetchAndPersistStatus(customerId, true);
+      fetchInventoryStats(customerId);
     }
   };
 
@@ -110,6 +167,15 @@ export default function Home() {
         <h1 className="text-2xl font-bold text-base-content">Inventory Dashboard</h1>
         <div className="badge badge-accent badge-lg">Live Updates</div>
       </div>
+
+      {statsError && (
+        <div className="alert alert-error mb-6">
+          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Failed to load some statistics. Try refreshing the page.</span>
+        </div>
+      )}
 
       <div className={`mb-6 p-4 rounded-xl transition-all duration-500 ${
         isLoading ? 'bg-gradient-to-r from-info/20 to-primary/20 animate-pulse' : 
@@ -137,41 +203,46 @@ export default function Home() {
             )}
           </div>
           {!isLoading && !statusMessage?.includes('unavailable') && (
-        <button 
-          className="ml-auto btn btn-sm btn-ghost"
-          onClick={handleManualRefresh}
-        >
-          Refresh Insights
-        </button>
-      )}
+            <button 
+              className="ml-auto btn btn-sm btn-ghost"
+              onClick={handleManualRefresh}
+            >
+              Refresh Insights
+            </button>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <StatsCard
           title="Total Items"
-          value="1,234"
+          value={totalItems ?? '...'}
           icon={<span className="text-primary text-xl">📦</span>}
           bgColor="bg-primary/20"
           trend={{ value: '+12%', color: 'text-success', icon: '↑' }}
         />
         <StatsCard
           title="Low Stock"
-          value="27"
+          value={lowStock ?? '...'}
           icon={<span className="text-secondary text-xl">⚠️</span>}
           bgColor="bg-secondary/20"
           trend={{ value: '-3%', color: 'text-error', icon: '↓' }}
         />
         <StatsCard
           title="Total Value"
-          value="$54,321"
+          value={totalValue ? 
+            new Intl.NumberFormat('en-US', {
+              style: 'currency',
+              currency: 'USD',
+              maximumFractionDigits: 0
+            }).format(totalValue) : '...'}
           icon={<span className="text-accent text-xl">💰</span>}
           bgColor="bg-accent/20"
           trend={{ value: '+8.2%', color: 'text-success', icon: '↑' }}
         />
         <StatsCard
           title="Categories"
-          value="15"
+          value={categoriesCount ?? '...'}
           icon={<span className="text-neutral text-xl">🗂️</span>}
           bgColor="bg-neutral/20"
           trend={{ value: '+2', color: 'text-success', icon: '→' }}
