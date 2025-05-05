@@ -95,64 +95,71 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-6 text-center">Inventory System Login</h2>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600">
+      <div className="relative bg-white/20 backdrop-blur-lg rounded-2xl p-8 shadow-xl w-full max-w-md border border-white/10">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/15 to-white/5 rounded-2xl -z-10" />
+        
+        <h2 className="text-4xl font-bold text-center mb-8 bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent">
+          Welcome Back
+        </h2>
+        
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="bg-red-500/90 text-white px-4 py-3 rounded-lg mb-6 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <span>{error}</span>
           </div>
         )}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              value={credentials.email}
-              onChange={(e) =>
-                setCredentials({ ...credentials, email: e.target.value })
-              }
-              required
-            />
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Email</label>
+            <div className="relative">
+              <input
+                type="email"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-cyan-300 focus:border-cyan-400 text-white placeholder-white/50 transition-all duration-200"
+                value={credentials.email}
+                onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Password
-            </label>
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Password</label>
             <input
               type="password"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-cyan-300 focus:border-cyan-400 text-white placeholder-white/50 transition-all duration-200"
               value={credentials.password}
-              onChange={(e) =>
-                setCredentials({ ...credentials, password: e.target.value })
-              }
+              onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+              placeholder="••••••••"
               required
             />
           </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="w-full py-3.5 px-6 bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-500 hover:to-blue-600 rounded-lg font-semibold text-white transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-cyan-500/20"
           >
             Sign In
           </button>
         </form>
 
         {/* Test Credentials */}
-        <div className="mt-6 p-4 bg-gray-50 rounded">
-          <h3 className="text-sm font-semibold text-gray-600 mb-2">Test Credentials:</h3>
-          <div className="space-y-2">
-            <p className="text-sm">
-              <span className="font-medium">Admin:</span> email: admin@admin.com, password: admin123
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Customer:</span> email: customer12@gmail.com, password: customer12
-            </p>
-            <p className="text-sm">
-              <span className="font-medium">Customer:</span> email: customer123@gmail.com, password: customer123
-            </p>
+        <div className="mt-8 pt-6 border-t border-white/10">
+          <h3 className="text-sm font-medium text-white/80 mb-3">Test Credentials</h3>
+          <div className="space-y-2.5">
+            <div className="bg-white/5 p-3 rounded-lg">
+              <p className="text-sm font-medium text-cyan-400">Admin Account</p>
+              <p className="text-xs text-white/70 mt-1">admin@admin.com<br/>admin123</p>
+            </div>
+            <div className="bg-white/5 p-3 rounded-lg">
+              <p className="text-sm font-medium text-cyan-400">Customer Accounts</p>
+              <p className="text-xs text-white/70 mt-1">customer12@gmail.com<br/>customer12</p>
+              <p className="text-xs text-white/70 mt-1">customer123@gmail.com<br/>customer123</p>
+            </div>
           </div>
         </div>
       </div>
