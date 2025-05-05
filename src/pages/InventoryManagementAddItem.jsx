@@ -72,7 +72,7 @@ const InventoryManagementAddItem = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="min-h-screen p-6 max-w-4xl mx-auto">
       <div className={`rounded-xl shadow-2xl w-full max-w-lg p-6 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
         <h3 className={`text-2xl font-bold mb-6 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
           New Product Details

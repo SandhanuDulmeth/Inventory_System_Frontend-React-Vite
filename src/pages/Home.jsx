@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import RadarChartItemTop5 from '../components/radarChartItemTop5';
 import './home.css';
+import { useNavigate } from 'react-router-dom';
 
 const StatsCard = ({ title, value, icon, bgColor, trend }) => {
   return (
@@ -29,6 +30,7 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [customerId, setCustomerId] = useState(null);
+  const navigate = useNavigate(); // Add this line
 
   const fetchAndPersistStatus = (customerId, forceRefresh = false) => {
     const storageKey = `status_${customerId}`;
@@ -194,19 +196,37 @@ export default function Home() {
         <div className="p-6 rounded-xl bg-base-200 shadow-lg hover:shadow-xl transition-shadow">
           <h2 className="text-xl font-semibold mb-4 text-base-content">Quick Actions</h2>
           <div className="space-y-4">
-            <button className="w-full p-3 btn btn-primary gap-2">
+            <button
+              className="w-full p-3 btn btn-primary gap-2"
+              onClick={() => {
+                navigate('/customer/inventory/add-item');
+                window.scrollTo(0, 0);
+              }}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
               </svg>
               Add New Item
             </button>
-            <button className="w-full p-3 btn btn-secondary gap-2">
+            <button
+              className="w-full p-3 btn btn-secondary gap-2"
+              onClick={() => {
+                navigate('/customer/reports');
+                window.scrollTo(0, 0);
+              }}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
               </svg>
               Generate Report
             </button>
-            <button className="w-full p-3 btn btn-accent gap-2">
+            <button
+              className="w-full p-3 btn btn-accent gap-2"
+              onClick={() => {
+                navigate('/customer/inventory/show-items');
+                window.scrollTo(0, 0);
+              }}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                 <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
