@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SlideOutPanel from '../components/SlideOutPanel';
-// import AdminChat from '../components/AdminChat';
+import ManageUsers from '../pages/ManageUsers'; 
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -11,7 +11,7 @@ const AdminDashboard = () => {
   });
   const { user } = useAuth();
   const [isChatOpen, setIsChatOpen] = useState(false);
-  // const [showChat, setShowChat] = useState(false);
+  const [showManageUsers, setShowManageUsers] = useState(false); // Add this state
 
   useEffect(() => {
     // Fetch admin dashboard data
@@ -60,7 +60,10 @@ const AdminDashboard = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
           <div className="space-y-2">
-            <button className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+            <button
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
+              onClick={() => setShowManageUsers(true)} // Open modal
+            >
               Manage Users
             </button>
             <button className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
@@ -87,10 +90,15 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Manage Users Modal */}
+      {showManageUsers && (
+        <ManageUsers onClose={() => setShowManageUsers(false)} />
+      )}
+
       {/* Slide-out panel for AdminChat */}
       <SlideOutPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;
